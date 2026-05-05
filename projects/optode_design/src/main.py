@@ -1,6 +1,6 @@
 #%%
 import numpy as np
-from utils import (
+from shared.utils import (
     SourceDetectorExtractor,
     neighborfilegeneration,
     badpairsdetection,
