@@ -1,10 +1,21 @@
 # EC-ML-Neuro
 
-A research framework for neuroimaging analysis combining:
+<!-- <p align="center">
+  <img src="images/main_framework.png" width="850">
+</p> -->
 
-- Brain connectivity modeling
-- Machine learning for fNIRS/EEG
-- Optode design and spatial configuration
+A research framework for neuroimaging analysis and computational neuroscience combining:
+
+* Brain connectivity modeling
+* Machine learning and deep learning for fNIRS/EEG
+* Effective connectivity (EC) analysis
+* Transformer and graph-based neural architectures
+* Optode design and spatial configuration
+* Neuroimaging signal processing
+* Brain network visualization
+* Pattern recognition and statistical modeling
+* Neurotechnology and BCI-related research
+
 
 ## Projects
 
