@@ -8,7 +8,10 @@ A research framework for neuroimaging analysis combining:
 
 ## Projects
 
-- fatigue_detection → ML pipeline for fatigue analysis
-- ec_transformer → transformer-based connectivity modeling
-- optode_design → tools for source-detector configuration
-- infant_study → pattern recognition and specific statistical analysis considering dependency among variables
+- fatigue_detection → ML pipeline for fatigue analysis using neuroimaging signals, including preprocessing, connectivity analysis, feature extraction, Patter Recognition and statistical evaluation.
+
+- ec_transformer → transformer-based connectivity modeling framework integrating temporal and effective connectivity representations for fNIRS analysis. The project includes adaptive gating mechanisms for combining multiple physiological representations. The associated manuscript is currently under second-round revision in the *IEEE Journal of Biomedical and Health Informatics (JBHI Ref: JBHI-06874-2025.R1)*. Due to the ongoing review process, the implementation is not publicly released at this stage.
+
+- optode_design → tools for source-detector configuration, full-head optode placement, and spatial validation for fNIRS acquisition systems. The project includes development of full-head configurations aligned with standard EEG positioning systems, distance validation between sources and detectors, and ongoing fabrication of a custom cap using 3D printing technologies for future recording experiments and data acquisition studies.
+
+- infant_study → pattern recognition and statistical analysis framework for infant neuroimaging studies, including dependency-aware statistical modeling, analysis of correlated variables, experimental task design, and IRB-related study preparation.
