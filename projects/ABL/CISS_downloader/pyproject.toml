@@ -1,0 +1,11 @@
+[project]
+name = "ciss-downloader"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.32.5",
+    "selenium>=4.46.0",
+    "webdriver-manager>=4.1.2",
+]
