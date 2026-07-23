@@ -1,16 +1,24 @@
-from src.downloader import CISSDownloader
+from pathlib import Path
 
+from src.api.client import CISSApi
+from src.crawler.navigation import NavigationCrawler
 
-def main():
+CASE_ID = 2400271
 
-    downloader = CISSDownloader()
+api = CISSApi()
 
-    downloader.download_case(6028)
+crawler = NavigationCrawler(api)
 
-    input("\nPress Enter to close...")
+tree = crawler.build(CASE_ID)
 
-    downloader.close()
+crawler.pretty_print(tree)
 
+output_dir = Path("data/raw") / str(CASE_ID)
+output_dir.mkdir(parents=True, exist_ok=True)
 
-if __name__ == "__main__":
-    main()
+crawler.save(
+    tree,
+    output_dir / "navigation_tree.json"
+)
+
+api.close()
