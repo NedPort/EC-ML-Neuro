@@ -16,3 +16,5 @@ CASE_DOWNLOAD = "/api/case/Download"
 SCENE_DOWNLOAD = "/api/case/scenes/download"
 SCENE_FILE_DOWNLOAD = "/api/case/scenefiles/download"
 SKETCH_DOWNLOAD = "/api/case/sketches-iv/download"
+
+CASE_EXPORT = "/api/Util/ExportCaseToExcel"
