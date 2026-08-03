@@ -1,47 +1,44 @@
-import json
-from pathlib import Path
+"""
+Run the data audit for one downloaded CISS case.
+"""
 
-from src.semantic.prompts.visual_evidence_prompt import (
-    build_visual_evidence_request,
+import argparse
+
+from src.audit.case_auditor import (
+    CaseAuditor,
 )
 
 
 def main():
-    groups_path = Path(
-        "data/processed/6028/"
-        "semantic/images/image_groups.json"
+    parser = argparse.ArgumentParser(
+        description=(
+            "Create the comprehensive audit "
+            "for one CISS case."
+        )
     )
 
-    with groups_path.open(
-        "r",
-        encoding="utf-8",
-    ) as input_file:
-        grouping = json.load(input_file)
-
-    selected_image = next(
-        image
-        for image in grouping["images"]
-        if image["asset_id"] == "case_6028_asset_0026"
+    parser.add_argument(
+        "case_id",
+        type=int,
+        help="CISS case ID, such as 6028 or 7009",
     )
 
-    request = build_visual_evidence_request(
-        selected_image
+    parser.add_argument(
+        "--data-root",
+        default="data",
+        help="Root data directory",
     )
 
-    print("Prompt version:", request["prompt_version"])
-    print()
-    print("SYSTEM PROMPT")
-    print(request["system_prompt"])
-    print()
-    print("USER PROMPT")
-    print(request["user_prompt"])
-    print()
-    print(
-        "Schema:",
-        request["json_schema"]["title"],
+    arguments = parser.parse_args()
+
+    auditor = CaseAuditor(
+        data_root=arguments.data_root
+    )
+
+    auditor.audit_case(
+        arguments.case_id
     )
 
 
 if __name__ == "__main__":
-    main()
-    
+    main() 
