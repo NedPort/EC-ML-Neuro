@@ -6,6 +6,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from statistics import median
+from typing import Any
 
 import json
 import zipfile
@@ -18,8 +19,11 @@ from src.audit.audit_rules import (
     IMPORTANT_VARIABLES,
     PRIMARY_KEYS,
     SENTINEL_TEXT_PATTERNS,
+    VARIABLE_CATEGORY_DEFAULTS,
+    VARIABLE_ENTITY_BY_SHEET,
+    VARIABLE_METADATA_OVERRIDES,
+    VARIABLE_REGISTRY_VERSION,
 )
-
 
 class CaseAuditor:
     """
@@ -2270,6 +2274,412 @@ class CaseAuditor:
 
         return result
 
+    @staticmethod
+    def _coerce_numeric_value(
+        value: Any,
+    ) -> float | None:
+        """
+        Convert a value to float when possible.
+
+        Boolean values are rejected because Python treats bool as int.
+        """
+
+        if value is None or value == "":
+            return None
+
+        if isinstance(value, bool):
+            return None
+
+        if isinstance(value, (int, float)):
+            return float(value)
+
+        if isinstance(value, str):
+            cleaned = value.strip().replace(",", "")
+
+            if not cleaned:
+                return None
+
+            try:
+                return float(cleaned)
+            except ValueError:
+                return None
+
+        return None
+
+    def _range_validation(
+        self,
+        sheet: dict[str, Any],
+        field: str,
+        expected_range: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        """
+        Validate all usable numeric values against an expected range.
+
+        Sentinel-coded records are excluded using the companion TEXT
+        variable when available.
+        """
+
+        if not expected_range:
+            return {
+                "status": "not_defined",
+                "minimum": None,
+                "maximum": None,
+                "numeric_value_count": 0,
+                "non_numeric_value_count": 0,
+                "out_of_range_count": 0,
+                "out_of_range_samples": [],
+            }
+
+        minimum = expected_range.get("minimum")
+        maximum = expected_range.get("maximum")
+
+        numeric_values: list[float] = []
+        non_numeric_count = 0
+        out_of_range_values: list[Any] = []
+
+        companion_field = f"{field}TEXT"
+
+        for record in sheet.get("records", []):
+            value = record.get(field)
+
+            if value is None or value == "":
+                continue
+
+            sentinel_category = self._sentinel_category(
+                record.get(companion_field)
+            )
+
+            if sentinel_category:
+                continue
+
+            numeric_value = self._coerce_numeric_value(value)
+
+            if numeric_value is None:
+                non_numeric_count += 1
+                continue
+
+            numeric_values.append(numeric_value)
+
+            below_minimum = (
+                minimum is not None
+                and numeric_value < minimum
+            )
+
+            above_maximum = (
+                maximum is not None
+                and numeric_value > maximum
+            )
+
+            if below_minimum or above_maximum:
+                if value not in out_of_range_values:
+                    out_of_range_values.append(value)
+
+        if not numeric_values and non_numeric_count == 0:
+            status = "not_evaluated_no_values"
+
+        elif out_of_range_values:
+            status = "failed"
+
+        elif non_numeric_count:
+            status = "passed_with_non_numeric_values"
+
+        else:
+            status = "passed"
+
+        return {
+            "status": status,
+            "minimum": minimum,
+            "maximum": maximum,
+            "numeric_value_count": len(numeric_values),
+            "non_numeric_value_count": non_numeric_count,
+            "out_of_range_count": len(out_of_range_values),
+            "out_of_range_samples": out_of_range_values[:5],
+        }
+    # ------------------------------------------------------------------
+    # Variable registry
+    # ------------------------------------------------------------------
+
+    def _variable_registry_entry(
+        self,
+        domain: str,
+        sheet_name: str,
+        field: str,
+        profile: dict[str, Any],
+        sheet: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Build one source-specific variable metadata record.
+        """
+
+        registry_id = f"{sheet_name}.{field}"
+
+        defaults = VARIABLE_CATEGORY_DEFAULTS.get(
+            domain,
+            {
+                "training_roles": (
+                    "observed_input",
+                ),
+                "downstream_stages": (3,),
+            },
+        )
+
+        override = VARIABLE_METADATA_OVERRIDES.get(
+            registry_id,
+            {},
+        )
+
+        present = bool(profile.get("present"))
+
+        record_count = int(
+            profile.get("record_count", 0) or 0
+        )
+
+        usable_count = int(
+            profile.get("usable_count", 0) or 0
+        )
+
+        # ----------------------------------------------------------
+        # Source availability
+        # ----------------------------------------------------------
+
+        if not present:
+            availability = "unavailable"
+            raw_usability = "unavailable"
+            confidence = None
+
+        elif record_count == 0:
+            availability = "source_present_no_records"
+            raw_usability = "not_usable"
+            confidence = None
+
+        elif usable_count == 0:
+            availability = "present_without_usable_values"
+            raw_usability = "not_usable"
+            confidence = None
+
+        else:
+            availability = "available"
+            raw_usability = "usable"
+            confidence = "reported"
+
+        expected_range = override.get(
+            "expected_range"
+        )
+
+        range_validation = self._range_validation(
+            sheet=sheet,
+            field=field,
+            expected_range=expected_range,
+        )
+
+        range_status = range_validation["status"]
+
+        if range_status == "failed":
+            raw_usability = "requires_validation"
+            confidence = "questionable"
+
+        training_roles = list(
+            override.get(
+                "training_roles",
+                defaults["training_roles"],
+            )
+        )
+
+        downstream_stages = list(
+            override.get(
+                "downstream_stages",
+                defaults["downstream_stages"],
+            )
+        )
+
+        # ----------------------------------------------------------
+        # Training usability
+        # ----------------------------------------------------------
+
+        if availability != "available":
+            training_usability = "not_usable"
+
+        elif range_status == "failed":
+            training_usability = (
+                "not_usable_until_range_issue_resolved"
+            )
+
+        elif "final_label" in training_roles:
+            training_usability = (
+                "requires_research_label_validation"
+            )
+
+        else:
+            training_usability = "candidate"
+
+        text_companion = (
+            f"{field}TEXT"
+            if f"{field}TEXT"
+            in sheet.get("headers", [])
+            else None
+        )
+
+        return {
+            "registry_id": registry_id,
+            "canonical_name": override.get(
+                "canonical_name",
+                field.lower(),
+            ),
+            "raw_name": field,
+            "entity_type": VARIABLE_ENTITY_BY_SHEET.get(
+                sheet_name,
+                "unknown",
+            ),
+            "category": domain,
+            "worksheet": sheet_name,
+            "source": "CISS Excel export",
+            "source_reference": registry_id,
+            "text_companion": text_companion,
+            "unit": override.get("unit"),
+            "unit_status": override.get(
+                "unit_status",
+                "not_defined",
+            ),
+            "expected_range": expected_range,
+            "range_status": range_status,
+            "range_validation": range_validation,
+            "availability": availability,
+
+            # Retained for backward compatibility.
+            "usability": raw_usability,
+
+            "raw_usability": raw_usability,
+            "training_usability": training_usability,
+            "confidence": confidence,
+            "training_roles": training_roles,
+            "downstream_stages": downstream_stages,
+            "case_profile": profile,
+        }
+
+    def _variable_registry(
+        self,
+        sheets: dict[str, Any],
+        important_variable_profile: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Convert the legacy important-variable profile into the
+        Stage-2 variable registry.
+
+        The old profile remains in the audit document for backward
+        compatibility.
+        """
+
+        variables: dict[str, dict[str, Any]] = {}
+
+        for domain, sheet_rules in IMPORTANT_VARIABLES.items():
+            for sheet_name, fields in sheet_rules.items():
+                sheet = sheets.get(
+                    sheet_name,
+                    {
+                        "headers": [],
+                        "records": [],
+                    },
+                )
+
+                profiles = (
+                    important_variable_profile
+                    .get(domain, {})
+                    .get(sheet_name, {})
+                )
+
+                for field in fields:
+                    profile = profiles.get(
+                        field,
+                        {
+                            "present": False,
+                        },
+                    )
+
+                    entry = self._variable_registry_entry(
+                        domain=domain,
+                        sheet_name=sheet_name,
+                        field=field,
+                        profile=profile,
+                        sheet=sheet,
+                    )
+
+                    variables[entry["registry_id"]] = entry
+
+        availability_counts = Counter(
+            entry["availability"]
+            for entry in variables.values()
+        )
+
+        range_status_counts = Counter(
+            entry["range_status"]
+            for entry in variables.values()
+        )
+
+        raw_usability_counts = Counter(
+            entry["raw_usability"]
+            for entry in variables.values()
+        )
+
+        training_usability_counts = Counter(
+            entry["training_usability"]
+            for entry in variables.values()
+        )
+
+        defined_role_counts = Counter(
+            role
+            for entry in variables.values()
+            for role in entry["training_roles"]
+        )
+
+        available_role_counts = Counter(
+            role
+            for entry in variables.values()
+            if entry["availability"] == "available"
+            for role in entry["training_roles"]
+        )
+
+        range_violation_variables = [
+            registry_id
+            for registry_id, entry in variables.items()
+            if entry["range_status"] == "failed"
+        ]
+
+        return {
+            "registry_version": VARIABLE_REGISTRY_VERSION,
+            "registry_id_format": "WORKSHEET.FIELD",
+            "variable_count": len(variables),
+            "availability_counts": dict(
+                sorted(availability_counts.items())
+            ),
+            "range_status_counts": dict(
+                sorted(range_status_counts.items())
+            ),
+            "raw_usability_counts": dict(
+                sorted(raw_usability_counts.items())
+            ),
+            "training_usability_counts": dict(
+                sorted(training_usability_counts.items())
+            ),
+
+            # Retained for backward compatibility.
+            "training_role_counts": dict(
+                sorted(defined_role_counts.items())
+            ),
+
+            "defined_training_role_counts": dict(
+                sorted(defined_role_counts.items())
+            ),
+            "available_training_role_counts": dict(
+                sorted(available_role_counts.items())
+            ),
+            "range_violation_count": len(
+                range_violation_variables
+            ),
+            "range_violation_variables": (
+                range_violation_variables
+            ),
+            "variables": variables,
+        }
     # ------------------------------------------------------------------
     # Asset inventory
     # ------------------------------------------------------------------
@@ -2767,8 +3177,24 @@ class CaseAuditor:
     # ------------------------------------------------------------------
     # Main audit
     # ------------------------------------------------------------------
+    def audit_case(
+        self,
+        case_id: int,
+    ) -> dict[str, Any]:
+        """
+        Create the comprehensive Stage-2 audit for one CISS case.
 
-    def audit_case(self, case_id):
+        Parameters
+        ----------
+        case_id:
+            CISS case identifier.
+
+        Returns
+        -------
+        dict[str, Any]
+            Complete case audit document.
+        """
+
         case_id = int(case_id)
 
         raw_directory = (
@@ -2784,6 +3210,10 @@ class CaseAuditor:
             / "audit"
             / "case_audit.json"
         )
+
+        # ----------------------------------------------------------
+        # Input paths
+        # ----------------------------------------------------------
 
         paths = {
             "manifest": (
@@ -2821,7 +3251,10 @@ class CaseAuditor:
             for name, path in paths.items()
         }
 
-        # Required structured inputs
+        # ----------------------------------------------------------
+        # Load Phase-1 inputs
+        # ----------------------------------------------------------
+
         metadata = self._load_json(
             paths["metadata"]
         )
@@ -2830,12 +3263,12 @@ class CaseAuditor:
             paths["navigation_tree"]
         )
 
-        registry = self._load_json(
+        asset_registry = self._load_json(
             paths["asset_registry"]
         )
 
-        # Manifest remains optional because older Phase-1 cases may
-        # predate manifest generation.
+        # The manifest is optional because older Phase-1 cases may
+        # have been created before manifest generation was added.
         manifest = self._load_json(
             paths["manifest"],
             required=False,
@@ -2845,12 +3278,40 @@ class CaseAuditor:
             paths["excel_export"]
         )
 
-        workbook_audit = (
-            self._audit_workbook(sheets)
+        # ----------------------------------------------------------
+        # Variable metadata
+        # ----------------------------------------------------------
+
+        # Preserve the original variable profile for backward
+        # compatibility.
+        important_variable_profile = (
+            self._important_variable_profile(
+                sheets
+            )
+        )
+
+        # Create the enriched Stage-2 variable registry.
+        variable_registry = (
+            self._variable_registry(
+                sheets=sheets,
+                important_variable_profile=(
+                    important_variable_profile
+                ),
+            )
+        )
+
+        # ----------------------------------------------------------
+        # Core audits
+        # ----------------------------------------------------------
+
+        workbook_audit = self._audit_workbook(
+            sheets
         )
 
         relational_audit = (
-            self._audit_relationships(sheets)
+            self._audit_relationships(
+                sheets
+            )
         )
 
         injury_audit = (
@@ -2878,28 +3339,32 @@ class CaseAuditor:
             )
         )
 
-        domains = (
-            self._domain_availability(
-                sheets,
-                registry,
-                injury_audit,
-                edr_audit,
-                mechanics_audit,
-            )
+        # ----------------------------------------------------------
+        # Domain availability and task eligibility
+        # ----------------------------------------------------------
+
+        domains = self._domain_availability(
+            sheets,
+            asset_registry,
+            injury_audit,
+            edr_audit,
+            mechanics_audit,
         )
 
-        eligibility = (
-            self._task_eligibility(
-                domains,
-                injury_audit,
-                edr_audit,
-                mechanics_audit,
-                contradiction_audit,
-            )
+        eligibility = self._task_eligibility(
+            domains,
+            injury_audit,
+            edr_audit,
+            mechanics_audit,
+            contradiction_audit,
         )
 
-        errors = []
-        warnings = []
+        # ----------------------------------------------------------
+        # Errors and warnings
+        # ----------------------------------------------------------
+
+        errors: list[str] = []
+        warnings: list[str] = []
 
         required_files = {
             "metadata",
@@ -2926,26 +3391,57 @@ class CaseAuditor:
                 )
             )
 
-        if workbook_audit[
-            "missing_core_sheets"
-        ]:
+        missing_core_sheets = (
+            workbook_audit.get(
+                "missing_core_sheets",
+                [],
+            )
+        )
+
+        if missing_core_sheets:
             errors.append(
                 "Core workbook sheets are missing: "
                 + ", ".join(
-                    workbook_audit[
-                        "missing_core_sheets"
-                    ]
+                    missing_core_sheets
                 )
             )
 
         errors.extend(
-            relational_audit["errors"]
+            relational_audit.get(
+                "errors",
+                [],
+            )
         )
 
+        # ----------------------------------------------------------
+        # Variable registry warnings
+        # ----------------------------------------------------------
+
+        range_violation_variables = (
+            variable_registry.get(
+                "range_violation_variables",
+                [],
+            )
+        )
+
+        if range_violation_variables:
+            warnings.append(
+                "Variables contain values outside their "
+                "documented ranges: "
+                + ", ".join(
+                    range_violation_variables
+                )
+            )
+
+        # ----------------------------------------------------------
+        # Injury-label warnings
+        # ----------------------------------------------------------
+
         if (
-            injury_audit[
-                "labeled_occupant_count"
-            ]
+            injury_audit.get(
+                "labeled_occupant_count",
+                0,
+            )
             == 0
         ):
             warnings.append(
@@ -2954,25 +3450,32 @@ class CaseAuditor:
                 "must not be interpreted as no injury."
             )
 
-        if not edr_audit[
-            "edr_obtained"
-        ]:
+        # ----------------------------------------------------------
+        # EDR warnings
+        # ----------------------------------------------------------
+
+        if not edr_audit.get(
+            "edr_obtained",
+            False,
+        ):
             warnings.append(
                 "No EDR data were found."
             )
 
-        elif not edr_audit[
-            "applicable_event_identified"
-        ]:
+        elif not edr_audit.get(
+            "applicable_event_identified",
+            False,
+        ):
             warnings.append(
-                "EDR collection information exists,"
-                 " but no EDR event records are available."
+                "EDR collection information exists, "
+                "but no EDR event records are available."
             )
 
         else:
-            if edr_audit[
-                "unit_validation_required"
-            ]:
+            if edr_audit.get(
+                "unit_validation_required",
+                False,
+            ):
                 warnings.append(
                     "The applicable EDR event contains "
                     "a Delta-V history, but its unit is "
@@ -2981,14 +3484,24 @@ class CaseAuditor:
                     "biomechanical calculations."
                 )
 
-            if (
-                edr_audit[
-                    "delta_v_history_available"
-                ]
-                and not edr_audit[
+            delta_v_history_available = (
+                edr_audit.get(
+                    "delta_v_history_available",
+                    False,
+                )
+            )
+
+            direct_acceleration_available = (
+                edr_audit.get(
                     "direct_acceleration_"
-                    "history_available"
-                ]
+                    "history_available",
+                    False,
+                )
+            )
+
+            if (
+                delta_v_history_available
+                and not direct_acceleration_available
             ):
                 warnings.append(
                     "A Delta-V time history is available, "
@@ -3000,13 +3513,8 @@ class CaseAuditor:
                 )
 
             elif not (
-                edr_audit[
-                    "delta_v_history_available"
-                ]
-                or edr_audit[
-                    "direct_acceleration_"
-                    "history_available"
-                ]
+                delta_v_history_available
+                or direct_acceleration_available
             ):
                 warnings.append(
                     "The applicable EDR event does not "
@@ -3020,7 +3528,10 @@ class CaseAuditor:
         )
 
         if (
-            agreement.get("available")
+            agreement.get(
+                "available",
+                False,
+            )
             and agreement.get(
                 "agreement_status"
             )
@@ -3032,13 +3543,26 @@ class CaseAuditor:
                 "by more than the audit tolerance."
             )
 
-        if contradiction_audit[
-            "contradiction_count"
-        ]:
+        # ----------------------------------------------------------
+        # Contradiction warnings
+        # ----------------------------------------------------------
+
+        contradiction_count = (
+            contradiction_audit.get(
+                "contradiction_count",
+                0,
+            )
+        )
+
+        if contradiction_count:
             warnings.append(
                 "Cross-source contradictions require "
                 "manual review."
             )
+
+        # ----------------------------------------------------------
+        # Overall audit status
+        # ----------------------------------------------------------
 
         if errors:
             status = "audit_failed"
@@ -3050,6 +3574,10 @@ class CaseAuditor:
 
         else:
             status = "audit_passed"
+
+        # ----------------------------------------------------------
+        # Final audit document
+        # ----------------------------------------------------------
 
         audit = {
             "schema_version": (
@@ -3133,12 +3661,10 @@ class CaseAuditor:
             },
             "asset_inventory": (
                 self._asset_summary(
-                    registry
+                    asset_registry
                 )
             ),
-            "workbook": (
-                workbook_audit
-            ),
+            "workbook": workbook_audit,
             "entities": (
                 self._entity_summary(
                     sheets
@@ -3147,10 +3673,15 @@ class CaseAuditor:
             "relational_integrity": (
                 relational_audit
             ),
+
+            # Legacy variable output retained temporarily.
             "important_variable_profile": (
-                self._important_variable_profile(
-                    sheets
-                )
+                important_variable_profile
+            ),
+
+            # New Stage-2 metadata contract.
+            "variable_registry": (
+                variable_registry
             ),
             "injury_outcome_audit": (
                 injury_audit
@@ -3183,13 +3714,17 @@ class CaseAuditor:
             },
         }
 
+        # ----------------------------------------------------------
+        # Save and report
+        # ----------------------------------------------------------
+
         self._save_json(
             audit,
             output_path,
         )
 
         print(
-            f"Case audit created: "
+            "Case audit created: "
             f"{output_path}"
         )
 
@@ -3208,3 +3743,4 @@ class CaseAuditor:
         )
 
         return audit
+   
