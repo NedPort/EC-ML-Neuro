@@ -2,9 +2,321 @@
 Definitions used by the CISS case auditor.
 """
 
-AUDIT_SCHEMA_VERSION = "2.1"
+"""
+Definitions used by the CISS case auditor.
+"""
 
-VARIABLE_REGISTRY_VERSION = "1.1"
+AUDIT_SCHEMA_VERSION = "2.5"
+
+VARIABLE_REGISTRY_VERSION = "1.3"
+
+ENTITY_REGISTRY_VERSION = "1.0"
+
+RESEARCH_LABEL_REGISTRY_VERSION = "1.0"
+
+# Stage-2 definitions for potential model supervision.
+#
+# The presence of a value in the workbook does not
+# automatically make it training-ready. Row-level
+# sentinel and outcome-readiness checks are performed
+# by ResearchLabelBuilder.
+
+RESEARCH_LABEL_DEFINITIONS = {
+    # --------------------------------------------------------------
+    # Final occupant injury labels
+    # --------------------------------------------------------------
+
+    "OCC.INJNUM": {
+        "canonical_name": (
+            "reported_injury_count"
+        ),
+        "label_family": (
+            "injury_outcome"
+        ),
+        "training_role": (
+            "final_label"
+        ),
+        "entity_type": "occupant",
+        "unit": "count",
+        "downstream_stages": (
+            8,
+            9,
+        ),
+    },
+
+    "OCC.INJSTATUS": {
+        "canonical_name": (
+            "injury_status"
+        ),
+        "label_family": (
+            "injury_outcome"
+        ),
+        "training_role": (
+            "final_label"
+        ),
+        "entity_type": "occupant",
+        "unit": "ciss_code",
+        "downstream_stages": (
+            8,
+            9,
+        ),
+    },
+
+    "OCC.MAIS": {
+        "canonical_name": (
+            "maximum_ais"
+        ),
+        "label_family": (
+            "injury_severity"
+        ),
+        "training_role": (
+            "final_label"
+        ),
+        "entity_type": "occupant",
+        "unit": "ais_level",
+        "downstream_stages": (
+            8,
+            9,
+        ),
+    },
+
+    "OCC.ISS": {
+        "canonical_name": (
+            "injury_severity_score"
+        ),
+        "label_family": (
+            "injury_severity"
+        ),
+        "training_role": (
+            "final_label"
+        ),
+        "entity_type": "occupant",
+        "unit": "score",
+        "downstream_stages": (
+            8,
+            9,
+        ),
+    },
+
+    "OCC.MORTALITY": {
+        "canonical_name": (
+            "mortality_status"
+        ),
+        "label_family": (
+            "medical_outcome"
+        ),
+        "training_role": (
+            "final_label"
+        ),
+        "entity_type": "occupant",
+        "unit": "ciss_code",
+        "downstream_stages": (
+            8,
+            9,
+        ),
+    },
+
+    "OCC.TREATMENT": {
+        "canonical_name": (
+            "treatment_status"
+        ),
+        "label_family": (
+            "medical_outcome"
+        ),
+        "training_role": (
+            "final_label"
+        ),
+        "entity_type": "occupant",
+        "unit": "ciss_code",
+        "downstream_stages": (
+            8,
+            9,
+        ),
+    },
+
+    # --------------------------------------------------------------
+    # Vehicle crash-mechanics labels
+    # --------------------------------------------------------------
+
+    "GV.DVTOTAL": {
+        "canonical_name": (
+            "delta_v_total"
+        ),
+        "label_family": (
+            "crash_mechanics"
+        ),
+        "training_role": (
+            "intermediate_label"
+        ),
+        "entity_type": "vehicle",
+        "unit": "km/h",
+        "downstream_stages": (
+            3,
+            4,
+            5,
+        ),
+    },
+
+    "GV.DVLONG": {
+        "canonical_name": (
+            "delta_v_longitudinal"
+        ),
+        "label_family": (
+            "crash_mechanics"
+        ),
+        "training_role": (
+            "intermediate_label"
+        ),
+        "entity_type": "vehicle",
+        "unit": "km/h",
+        "downstream_stages": (
+            3,
+            4,
+            5,
+        ),
+    },
+
+    "GV.DVLAT": {
+        "canonical_name": (
+            "delta_v_lateral"
+        ),
+        "label_family": (
+            "crash_mechanics"
+        ),
+        "training_role": (
+            "intermediate_label"
+        ),
+        "entity_type": "vehicle",
+        "unit": "km/h",
+        "downstream_stages": (
+            3,
+            4,
+            5,
+        ),
+    },
+
+    # --------------------------------------------------------------
+    # CDC reconstruction labels
+    # --------------------------------------------------------------
+
+    "CDC.DVTOTAL": {
+        "canonical_name": (
+            "delta_v_total"
+        ),
+        "label_family": (
+            "crash_mechanics"
+        ),
+        "training_role": (
+            "intermediate_label"
+        ),
+        "entity_type": "vehicle",
+        "unit": "km/h",
+        "downstream_stages": (
+            3,
+            4,
+            5,
+        ),
+    },
+
+    "CDC.DVLONG": {
+        "canonical_name": (
+            "delta_v_longitudinal"
+        ),
+        "label_family": (
+            "crash_mechanics"
+        ),
+        "training_role": (
+            "intermediate_label"
+        ),
+        "entity_type": "vehicle",
+        "unit": "km/h",
+        "downstream_stages": (
+            3,
+            4,
+            5,
+        ),
+    },
+
+    "CDC.DVLAT": {
+        "canonical_name": (
+            "delta_v_lateral"
+        ),
+        "label_family": (
+            "crash_mechanics"
+        ),
+        "training_role": (
+            "intermediate_label"
+        ),
+        "entity_type": "vehicle",
+        "unit": "km/h",
+        "downstream_stages": (
+            3,
+            4,
+            5,
+        ),
+    },
+
+    "CDC.PDOF": {
+        "canonical_name": (
+            "principal_direction_of_force"
+        ),
+        "label_family": (
+            "crash_mechanics"
+        ),
+        "training_role": (
+            "intermediate_label"
+        ),
+        "entity_type": "vehicle",
+        "unit": "degree",
+        "downstream_stages": (
+            3,
+            4,
+            5,
+        ),
+    },
+
+    # --------------------------------------------------------------
+    # EDR intermediate labels
+    # --------------------------------------------------------------
+
+    "EDREVENT.MAXDVLONG": {
+        "canonical_name": (
+            "edr_max_delta_v_longitudinal"
+        ),
+        "label_family": (
+            "edr_crash_mechanics"
+        ),
+        "training_role": (
+            "intermediate_label"
+        ),
+        "entity_type": "edr_event",
+        "unit": "km/h",
+        "downstream_stages": (
+            3,
+            4,
+            5,
+        ),
+    },
+
+    "EDREVENT.MAXDVLAT": {
+        "canonical_name": (
+            "edr_max_delta_v_lateral"
+        ),
+        "label_family": (
+            "edr_crash_mechanics"
+        ),
+        "training_role": (
+            "intermediate_label"
+        ),
+        "entity_type": "edr_event",
+        "unit": "km/h",
+        "downstream_stages": (
+            3,
+            4,
+            5,
+        ),
+    },
+}
 
 
 CORE_SHEETS = {
@@ -535,6 +847,32 @@ VARIABLE_METADATA_OVERRIDES = {
     # Injury labels
     # --------------------------------------------------------------
 
+    # Keys in the detailed INJURY worksheet are identifiers, not labels.
+    "INJURY.VEHNO": {
+        "canonical_name": "vehicle_number",
+        "training_roles": ("identifier",),
+        "downstream_stages": (3, 8, 9),
+    },
+
+    "INJURY.OCCNO": {
+        "canonical_name": "occupant_number",
+        "training_roles": ("identifier",),
+        "downstream_stages": (3, 8, 9),
+    },
+
+    "INJURY.INJNO": {
+        "canonical_name": "injury_number",
+        "training_roles": ("identifier",),
+        "downstream_stages": (3, 8, 9),
+    },
+
+    # Narrative text supports interpretation but is not itself a target.
+    "INJURY.INJURYNOTE": {
+        "canonical_name": "injury_note",
+        "training_roles": ("observed_input",),
+        "downstream_stages": (3, 8, 9),
+    },
+
     "OCC.AIS": {
         "canonical_name": "ais",
         "expected_range": {
@@ -581,8 +919,12 @@ VARIABLE_METADATA_OVERRIDES = {
 
     "EDREVENT.MAXDVLONG": {
         "canonical_name": "edr_max_delta_v_longitudinal",
-        "unit": None,
-        "unit_status": "requires_source_verification",
+        "unit": "km/h",
+        "unit_status": "verified_from_ciss_manual",
+        "expected_range": {
+            "minimum": -150,
+            "maximum": 150,
+        },
         "training_roles": (
             "intermediate_label",
             "physics_parameter",
@@ -592,8 +934,12 @@ VARIABLE_METADATA_OVERRIDES = {
 
     "EDREVENT.MAXDVLAT": {
         "canonical_name": "edr_max_delta_v_lateral",
-        "unit": None,
-        "unit_status": "requires_source_verification",
+        "unit": "km/h",
+        "unit_status": "verified_from_ciss_manual",
+        "expected_range": {
+            "minimum": -150,
+            "maximum": 150,
+        },
         "training_roles": (
             "intermediate_label",
             "physics_parameter",
@@ -636,4 +982,61 @@ PRIMARY_KEYS = {
         "VEHNO",
         "EDREVENTNO",
     ),
+}
+
+
+# Numeric sentinel codes are source-specific.  They supplement, rather than
+# replace, the companion ``*TEXT`` fields because the Crash Viewer Excel
+# export sometimes repeats a numeric code in the text column instead of the
+# analytical label (for example, AGE=999 and AGETEXT="999").
+NUMERIC_SENTINEL_VALUES = {
+    "OCC.AGE": {
+        999: "unknown",
+    },
+    "OCC.HEIGHT": {
+        999: "unknown",
+    },
+    "OCC.WEIGHT": {
+        999: "unknown",
+    },
+    "OCC.MAIS": {
+        9: "injured_unknown_severity",
+        99: "unknown",
+    },
+    "OCC.ISS": {
+        97: "injured_unknown_severity",
+        99: "unknown",
+    },
+    "INJURY.AIS": {
+        9: "injured_unknown_severity",
+    },
+    "GV.DVTOTAL": {
+        999: "unknown",
+    },
+    "GV.DVLONG": {
+        999: "unknown",
+    },
+    "GV.DVLAT": {
+        999: "unknown",
+    },
+    "CDC.DVTOTAL": {
+        999: "unknown",
+    },
+    "CDC.DVLONG": {
+        999: "unknown",
+    },
+    "CDC.DVLAT": {
+        999: "unknown",
+    },
+    "CDC.PDOF": {
+        999: "unknown",
+    },
+    "EDREVENT.MAXDVLONG": {
+        888: "reported_invalid",
+        997: "not_reported",
+    },
+    "EDREVENT.MAXDVLAT": {
+        888: "reported_invalid",
+        997: "not_reported",
+    },
 }

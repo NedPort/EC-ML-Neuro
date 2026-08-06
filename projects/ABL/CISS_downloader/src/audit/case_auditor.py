@@ -9,14 +9,22 @@ from statistics import median
 from typing import Any
 
 import json
+import re
 import zipfile
 
 from openpyxl import load_workbook
+from src.audit.entity_registry import (
+    EntityRegistryBuilder,
+)
+from src.audit.research_labels import (
+    ResearchLabelBuilder,
+)
 
 from src.audit.audit_rules import (
     AUDIT_SCHEMA_VERSION,
     CORE_SHEETS,
     IMPORTANT_VARIABLES,
+    NUMERIC_SENTINEL_VALUES,
     PRIMARY_KEYS,
     SENTINEL_TEXT_PATTERNS,
     VARIABLE_CATEGORY_DEFAULTS,
@@ -183,19 +191,73 @@ class CaseAuditor:
 
         return None
 
-    def _is_usable(self, record, field):
+    @staticmethod
+    def _numeric_sentinel_category(
+        sheet_name: str | None,
+        field: str,
+        value: Any,
+    ) -> str | None:
+        """Return a source-specific numeric sentinel category."""
+
+        if not sheet_name:
+            return None
+
+        registry_id = f"{sheet_name}.{field}"
+        sentinel_rules = NUMERIC_SENTINEL_VALUES.get(
+            registry_id,
+            {},
+        )
+
+        numeric_value = CaseAuditor._coerce_numeric_value(
+            value
+        )
+
+        if numeric_value is None:
+            return None
+
+        for sentinel_value, category in sentinel_rules.items():
+            if numeric_value == float(sentinel_value):
+                return category
+
+        return None
+
+    def _record_sentinel_category(
+        self,
+        record: dict[str, Any],
+        field: str,
+        sheet_name: str | None = None,
+    ) -> str | None:
+        """Resolve text and numeric sentinel representations."""
+
+        text_category = self._sentinel_category(
+            record.get(f"{field}TEXT")
+        )
+
+        if text_category:
+            return text_category
+
+        return self._numeric_sentinel_category(
+            sheet_name=sheet_name,
+            field=field,
+            value=record.get(field),
+        )
+
+    def _is_usable(
+        self,
+        record,
+        field,
+        sheet_name=None,
+    ):
         value = record.get(field)
 
         if value is None or value == "":
             return False
 
-        paired_text = record.get(
-            f"{field}TEXT"
-        )
-
         return (
-            self._sentinel_category(
-                paired_text
+            self._record_sentinel_category(
+                record=record,
+                field=field,
+                sheet_name=sheet_name,
             )
             is None
         )
@@ -515,6 +577,7 @@ class CaseAuditor:
                 if self._is_usable(
                     record,
                     "INJNUM",
+                    sheet_name="OCC",
                 )
                 else None
             )
@@ -524,6 +587,7 @@ class CaseAuditor:
                 if self._is_usable(
                     record,
                     "MAIS",
+                    sheet_name="OCC",
                 )
                 else None
             )
@@ -533,6 +597,7 @@ class CaseAuditor:
                 if self._is_usable(
                     record,
                     "ISS",
+                    sheet_name="OCC",
                 )
                 else None
             )
@@ -542,6 +607,7 @@ class CaseAuditor:
                 if self._is_usable(
                     record,
                     "INJSTATUS",
+                    sheet_name="OCC",
                 )
                 else None
             )
@@ -661,6 +727,144 @@ class CaseAuditor:
             ),
             "occupants": occupants,
         }
+
+    def _final_label_readiness(
+        self,
+        injury_audit: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Summarize which occupant outcomes can supervise ML training."""
+
+        occupants = injury_audit.get(
+            "occupants",
+            [],
+        )
+
+        occupant_records = [
+            {
+                "case_id": occupant.get("case_id"),
+                "vehicle_number": occupant.get(
+                    "vehicle_number"
+                ),
+                "occupant_number": occupant.get(
+                    "occupant_number"
+                ),
+                "label_state": occupant.get(
+                    "label_state"
+                ),
+                "training_eligible": bool(
+                    occupant.get("label_available")
+                ),
+                "exclusion_reason": (
+                    None
+                    if occupant.get("label_available")
+                    else "unknown_or_insufficient_injury_outcome"
+                ),
+            }
+            for occupant in occupants
+        ]
+
+        total_occupants = len(occupant_records)
+        eligible_occupants = sum(
+            record["training_eligible"]
+            for record in occupant_records
+        )
+        excluded_occupants = total_occupants - eligible_occupants
+
+        if total_occupants == 0:
+            status = "not_available"
+            reason = "No occupant records are available."
+        elif eligible_occupants == 0:
+            status = "not_ready"
+            reason = (
+                "No occupants have reliable positive or explicit "
+                "negative injury outcomes."
+            )
+        elif eligible_occupants == total_occupants:
+            status = "ready"
+            reason = (
+                "All occupants have reliable positive or explicit "
+                "negative injury outcomes."
+            )
+        else:
+            status = "partially_ready"
+            reason = (
+                "Only a subset of occupants has reliable injury "
+                "outcomes; row-level filtering is required."
+            )
+
+        return {
+            "status": status,
+            "count_unit": "occupant_records",
+            "total_occupants": total_occupants,
+            "eligible_occupants": eligible_occupants,
+            "excluded_occupants": excluded_occupants,
+            "label_state_counts": injury_audit.get(
+                "state_counts",
+                {},
+            ),
+            "reason": reason,
+            "occupants": occupant_records,
+        }
+
+    @staticmethod
+    def _apply_final_label_readiness(
+        variable_registry: dict[str, Any],
+        final_label_readiness: dict[str, Any],
+    ) -> None:
+        """Apply occupant-level label validation to registry metadata."""
+
+        readiness_status = final_label_readiness.get("status")
+        variables = variable_registry.get("variables", {})
+
+        for entry in variables.values():
+            if "final_label" not in entry.get("training_roles", []):
+                continue
+            if entry.get("availability") != "available":
+                continue
+
+            if readiness_status == "ready":
+                entry["training_usability"] = "training_ready"
+                entry["label_validation_status"] = (
+                    "validated_at_occupant_level"
+                )
+            elif readiness_status == "partially_ready":
+                entry["training_usability"] = (
+                    "partially_training_ready_requires_row_filtering"
+                )
+                entry["label_validation_status"] = (
+                    "partially_validated_at_occupant_level"
+                )
+            else:
+                entry["training_usability"] = (
+                    "not_training_ready_no_reliable_labels"
+                )
+                entry["label_validation_status"] = (
+                    "rejected_at_occupant_level"
+                )
+
+        training_usability_counts = Counter(
+            entry.get("training_usability")
+            for entry in variables.values()
+        )
+
+        ready_final_label_variables = sorted(
+            registry_id
+            for registry_id, entry in variables.items()
+            if (
+                "final_label" in entry.get("training_roles", [])
+                and entry.get("training_usability") == "training_ready"
+            )
+        )
+
+        variable_registry["training_usability_counts"] = dict(
+            sorted(training_usability_counts.items())
+        )
+        variable_registry[
+            "training_ready_final_label_variable_count"
+        ] = len(ready_final_label_variables)
+        variable_registry[
+            "training_ready_final_label_variables"
+        ] = ready_final_label_variables
 
 
 
@@ -1247,6 +1451,7 @@ class CaseAuditor:
             if self._is_usable(
                 event_record,
                 "MAXDVLONG",
+                sheet_name="EDREVENT",
             )
             else None
         )
@@ -1258,6 +1463,7 @@ class CaseAuditor:
             if self._is_usable(
                 event_record,
                 "MAXDVLONGTIME",
+                sheet_name="EDREVENT",
             )
             else None
         )
@@ -1619,6 +1825,7 @@ class CaseAuditor:
                 if not self._is_usable(
                     record,
                     "DVTOTAL",
+                    sheet_name=sheet_name,
                 ):
                     continue
 
@@ -1645,6 +1852,7 @@ class CaseAuditor:
                             if self._is_usable(
                                 record,
                                 "DVLONG",
+                                sheet_name=sheet_name,
                             )
                             else None
                         ),
@@ -1653,6 +1861,7 @@ class CaseAuditor:
                             if self._is_usable(
                                 record,
                                 "DVLAT",
+                                sheet_name=sheet_name,
                             )
                             else None
                         ),
@@ -1676,6 +1885,7 @@ class CaseAuditor:
                 if self._is_usable(
                     record,
                     "MAXDVLONG",
+                    sheet_name="EDREVENT",
                 )
                 else None
             )
@@ -1685,6 +1895,7 @@ class CaseAuditor:
                 if self._is_usable(
                     record,
                     "MAXDVLAT",
+                    sheet_name="EDREVENT",
                 )
                 else None
             )
@@ -2180,6 +2391,7 @@ class CaseAuditor:
 
     def _profile_variable(
         self,
+        sheet_name,
         sheet,
         field,
     ):
@@ -2200,10 +2412,10 @@ class CaseAuditor:
                 continue
 
             category = (
-                self._sentinel_category(
-                    record.get(
-                        f"{field}TEXT"
-                    )
+                self._record_sentinel_category(
+                    record=record,
+                    field=field,
+                    sheet_name=sheet_name,
                 )
             )
 
@@ -2265,6 +2477,7 @@ class CaseAuditor:
                 result[domain][sheet_name] = {
                     field: (
                         self._profile_variable(
+                            sheet_name,
                             sheet,
                             field,
                         )
@@ -2308,6 +2521,7 @@ class CaseAuditor:
 
     def _range_validation(
         self,
+        sheet_name: str,
         sheet: dict[str, Any],
         field: str,
         expected_range: dict[str, Any] | None,
@@ -2337,16 +2551,16 @@ class CaseAuditor:
         non_numeric_count = 0
         out_of_range_values: list[Any] = []
 
-        companion_field = f"{field}TEXT"
-
         for record in sheet.get("records", []):
             value = record.get(field)
 
             if value is None or value == "":
                 continue
 
-            sentinel_category = self._sentinel_category(
-                record.get(companion_field)
+            sentinel_category = self._record_sentinel_category(
+                record=record,
+                field=field,
+                sheet_name=sheet_name,
             )
 
             if sentinel_category:
@@ -2399,6 +2613,221 @@ class CaseAuditor:
     # Variable registry
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _parse_metadata_age(
+        value: Any,
+    ) -> dict[str, Any] | None:
+        """Parse API age strings such as ``42 years`` or ``18 months``."""
+
+        if not isinstance(value, str):
+            return None
+
+        match = re.fullmatch(
+            r"\s*(\d+(?:\.\d+)?)\s*(years?|months?)\s*",
+            value,
+            flags=re.IGNORECASE,
+        )
+
+        if not match:
+            return None
+
+        amount = float(match.group(1))
+        reported_unit = match.group(2).lower()
+
+        if reported_unit.startswith("month"):
+            age_years = amount / 12.0
+            age_months = amount
+        else:
+            age_years = amount
+            age_months = amount * 12.0
+
+        return {
+            "reported_value": amount,
+            "reported_unit": reported_unit,
+            "age_years": age_years,
+            "age_months": age_months,
+        }
+
+    def _audit_occupant_age(
+        self,
+        sheets: dict[str, Any],
+        metadata: Any,
+    ) -> dict[str, Any]:
+        """
+        Reconcile OCC.AGE with the API occupant profile.
+
+        The Crash Viewer Excel endpoint can expose adult ages as a
+        month-like count even though the analytical CISS AGE variable is
+        defined in years.  This method documents a normalization candidate;
+        it never mutates the raw workbook value.
+        """
+
+        profiles = (
+            metadata.get("occupantProfiles", [])
+            if isinstance(metadata, dict)
+            else []
+        )
+
+        profile_index = {
+            (
+                profile.get("caseId"),
+                profile.get("vehicleNumber"),
+                profile.get("occupantNumber"),
+            ): profile
+            for profile in profiles
+            if isinstance(profile, dict)
+        }
+
+        results = []
+
+        for record in self._records(sheets, "OCC"):
+            raw_age = record.get("AGE")
+
+            key = (
+                record.get("CASEID"),
+                record.get("VEHNO"),
+                record.get("OCCNO"),
+            )
+
+            profile = profile_index.get(key)
+            metadata_age_text = (
+                profile.get("age")
+                if profile
+                else None
+            )
+            parsed_metadata_age = (
+                self._parse_metadata_age(
+                    metadata_age_text
+                )
+            )
+
+            raw_numeric = self._coerce_numeric_value(
+                raw_age
+            )
+
+            if not self._is_usable(
+                record,
+                "AGE",
+                sheet_name="OCC",
+            ):
+                reconciliation = "raw_age_not_usable"
+                canonical_age = None
+                normalization = None
+
+            elif parsed_metadata_age is None:
+                reconciliation = "metadata_age_unavailable"
+                canonical_age = None
+                normalization = None
+
+            elif raw_numeric is None:
+                reconciliation = "raw_age_not_numeric"
+                canonical_age = None
+                normalization = None
+
+            else:
+                metadata_years = parsed_metadata_age[
+                    "age_years"
+                ]
+
+                direct_match = abs(
+                    raw_numeric - metadata_years
+                ) < 1e-9
+
+                month_encoded_match = (
+                    raw_numeric > 120
+                    and abs(
+                        raw_numeric / 12.0
+                        - metadata_years
+                    )
+                    < 1e-9
+                )
+
+                if direct_match:
+                    reconciliation = "direct_year_match"
+                    canonical_age = metadata_years
+                    normalization = None
+
+                elif month_encoded_match:
+                    reconciliation = (
+                        "month_encoded_value_confirmed"
+                    )
+                    canonical_age = metadata_years
+                    normalization = {
+                        "operation": "divide",
+                        "factor": 12,
+                        "from_unit": "month_like_count",
+                        "to_unit": "year",
+                        "apply_in_stage": 3,
+                        "applied_during_audit": False,
+                    }
+
+                else:
+                    reconciliation = "cross_source_mismatch"
+                    canonical_age = None
+                    normalization = None
+
+            results.append(
+                {
+                    "case_id": key[0],
+                    "vehicle_number": key[1],
+                    "occupant_number": key[2],
+                    "raw_excel_age": raw_age,
+                    "raw_excel_age_text": record.get(
+                        "AGETEXT"
+                    ),
+                    "metadata_age_text": metadata_age_text,
+                    "parsed_metadata_age": parsed_metadata_age,
+                    "reconciliation": reconciliation,
+                    "canonical_age_years_candidate": (
+                        canonical_age
+                    ),
+                    "normalization_candidate": normalization,
+                }
+            )
+
+        reconciled_states = {
+            "direct_year_match",
+            "month_encoded_value_confirmed",
+        }
+
+        reconciled_count = sum(
+            result["reconciliation"] in reconciled_states
+            for result in results
+        )
+        month_encoded_count = sum(
+            result["reconciliation"]
+            == "month_encoded_value_confirmed"
+            for result in results
+        )
+        unresolved_count = sum(
+            result["reconciliation"]
+            not in reconciled_states
+            for result in results
+        )
+
+        if not results:
+            status = "not_available"
+        elif unresolved_count == 0:
+            status = "reconciled"
+        elif reconciled_count:
+            status = "partially_reconciled"
+        else:
+            status = "unresolved"
+
+        return {
+            "status": status,
+            "source_variable": "OCC.AGE",
+            "canonical_unit": "year",
+            "record_count": len(results),
+            "reconciled_count": reconciled_count,
+            "month_encoded_count": month_encoded_count,
+            "unresolved_count": unresolved_count,
+            "normalization_required": month_encoded_count > 0,
+            "raw_values_preserved": True,
+            "normalization_stage": 3,
+            "records": results,
+        }
+
     def _variable_registry_entry(
         self,
         domain: str,
@@ -2406,6 +2835,7 @@ class CaseAuditor:
         field: str,
         profile: dict[str, Any],
         sheet: dict[str, Any],
+        occupant_age_audit: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Build one source-specific variable metadata record.
@@ -2467,6 +2897,7 @@ class CaseAuditor:
         )
 
         range_validation = self._range_validation(
+            sheet_name=sheet_name,
             sheet=sheet,
             field=field,
             expected_range=expected_range,
@@ -2477,6 +2908,50 @@ class CaseAuditor:
         if range_status == "failed":
             raw_usability = "requires_validation"
             confidence = "questionable"
+
+        semantic_reconciliation = None
+        normalization_candidate = None
+        raw_unit = override.get("unit")
+
+        if (
+            registry_id == "OCC.AGE"
+            and occupant_age_audit
+        ):
+            semantic_reconciliation = {
+                "status": occupant_age_audit.get("status"),
+                "reconciled_count": occupant_age_audit.get(
+                    "reconciled_count",
+                    0,
+                ),
+                "unresolved_count": occupant_age_audit.get(
+                    "unresolved_count",
+                    0,
+                ),
+                "month_encoded_count": occupant_age_audit.get(
+                    "month_encoded_count",
+                    0,
+                ),
+            }
+
+            if (
+                occupant_age_audit.get("status") == "reconciled"
+                and occupant_age_audit.get(
+                    "normalization_required"
+                )
+            ):
+                range_status = "raw_encoding_reconciled"
+                range_validation["status"] = range_status
+                raw_usability = "requires_standardization"
+                confidence = "cross_source_confirmed"
+                raw_unit = "month_like_count"
+                normalization_candidate = {
+                    "operation": "divide",
+                    "factor": 12,
+                    "from_unit": "month_like_count",
+                    "to_unit": "year",
+                    "apply_in_stage": 3,
+                    "applied_during_audit": False,
+                }
 
         training_roles = list(
             override.get(
@@ -2503,6 +2978,9 @@ class CaseAuditor:
             training_usability = (
                 "not_usable_until_range_issue_resolved"
             )
+
+        elif range_status == "raw_encoding_reconciled":
+            training_usability = "requires_standardization"
 
         elif "final_label" in training_roles:
             training_usability = (
@@ -2536,6 +3014,7 @@ class CaseAuditor:
             "source_reference": registry_id,
             "text_companion": text_companion,
             "unit": override.get("unit"),
+            "raw_unit": raw_unit,
             "unit_status": override.get(
                 "unit_status",
                 "not_defined",
@@ -2543,6 +3022,8 @@ class CaseAuditor:
             "expected_range": expected_range,
             "range_status": range_status,
             "range_validation": range_validation,
+            "semantic_reconciliation": semantic_reconciliation,
+            "normalization_candidate": normalization_candidate,
             "availability": availability,
 
             # Retained for backward compatibility.
@@ -2560,6 +3041,7 @@ class CaseAuditor:
         self,
         sheets: dict[str, Any],
         important_variable_profile: dict[str, Any],
+        occupant_age_audit: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Convert the legacy important-variable profile into the
@@ -2601,6 +3083,7 @@ class CaseAuditor:
                         field=field,
                         profile=profile,
                         sheet=sheet,
+                        occupant_age_audit=occupant_age_audit,
                     )
 
                     variables[entry["registry_id"]] = entry
@@ -2768,6 +3251,7 @@ class CaseAuditor:
             self._is_usable(
                 record,
                 "PDOF",
+                sheet_name="CDC",
             )
             for record in self._records(
                 sheets,
@@ -3277,7 +3761,13 @@ class CaseAuditor:
         sheets = self._read_workbook(
             paths["excel_export"]
         )
-
+        entity_registry = (
+            EntityRegistryBuilder().build(
+                case_id=case_id,
+                sheets=sheets,
+                asset_registry=asset_registry,
+            )
+        )
         # ----------------------------------------------------------
         # Variable metadata
         # ----------------------------------------------------------
@@ -3290,12 +3780,22 @@ class CaseAuditor:
             )
         )
 
+        occupant_age_audit = (
+            self._audit_occupant_age(
+                sheets=sheets,
+                metadata=metadata,
+            )
+        )
+
         # Create the enriched Stage-2 variable registry.
         variable_registry = (
             self._variable_registry(
                 sheets=sheets,
                 important_variable_profile=(
                     important_variable_profile
+                ),
+                occupant_age_audit=(
+                    occupant_age_audit
                 ),
             )
         )
@@ -3320,10 +3820,35 @@ class CaseAuditor:
             )
         )
 
+        final_label_readiness = (
+            self._final_label_readiness(
+                injury_audit
+            )
+        )
+
+        self._apply_final_label_readiness(
+            variable_registry,
+            final_label_readiness,
+        )
+
         edr_audit = self._audit_edr(
             sheets
         )
+        # ----------------------------------------------------------
+        # Research label registry
+        # ----------------------------------------------------------
 
+        research_labels = (
+            ResearchLabelBuilder().build(
+                case_id=case_id,
+                sheets=sheets,
+                entity_registry=entity_registry,
+                final_label_readiness=(
+                    final_label_readiness
+                ),
+                edr_audit=edr_audit,
+            )
+        )
         mechanics_audit = (
             self._audit_crash_mechanics(
                 sheets,
@@ -3365,14 +3890,47 @@ class CaseAuditor:
 
         errors: list[str] = []
         warnings: list[str] = []
+        unresolved_entity_references = (
+            entity_registry.get(
+                "summary",
+                {},
+            ).get(
+                "unresolved_reference_count",
+                0,
+            )
+        )
 
+        if unresolved_entity_references:
+            warnings.append(
+                "Entity registry contains "
+                f"{unresolved_entity_references} "
+                "unresolved reference(s); "
+                "downstream joins require review."
+            )
         required_files = {
             "metadata",
             "navigation_tree",
             "asset_registry",
             "excel_export",
         }
+        unresolved_research_labels = (
+            research_labels.get(
+                "summary",
+                {},
+            ).get(
+                "unresolved_label_count",
+                0,
+            )
+        )
 
+        if unresolved_research_labels:
+            warnings.append(
+                "Research label registry contains "
+                f"{unresolved_research_labels} "
+                "unresolved label reference(s); "
+                "downstream supervision joins "
+                "require review."
+            )
         missing_files = [
             name
             for name, information
@@ -3432,6 +3990,28 @@ class CaseAuditor:
                     range_violation_variables
                 )
             )
+
+        if occupant_age_audit.get(
+            "normalization_required",
+            False,
+        ):
+            if (
+                occupant_age_audit.get("status")
+                == "reconciled"
+            ):
+                warnings.append(
+                    "OCC.AGE uses a month-like encoding in the "
+                    "Crash Viewer Excel export. The values were "
+                    "cross-source reconciled with metadata.json; "
+                    "raw values were preserved and conversion to "
+                    "years was deferred to Stage 3."
+                )
+            else:
+                warnings.append(
+                    "OCC.AGE contains a suspected month-like "
+                    "encoding that could not be fully reconciled "
+                    "with metadata.json."
+                )
 
         # ----------------------------------------------------------
         # Injury-label warnings
@@ -3665,11 +4245,22 @@ class CaseAuditor:
                 )
             ),
             "workbook": workbook_audit,
+            # Legacy entity count summary retained for
+            # backward compatibility.
             "entities": (
                 self._entity_summary(
                     sheets
                 )
             ),
+
+            "entity_registry": (
+                entity_registry
+            ),
+
+            "research_labels": (
+                research_labels
+            ),
+
             "relational_integrity": (
                 relational_audit
             ),
@@ -3682,6 +4273,12 @@ class CaseAuditor:
             # New Stage-2 metadata contract.
             "variable_registry": (
                 variable_registry
+            ),
+            "occupant_age_audit": (
+                occupant_age_audit
+            ),
+            "final_label_readiness": (
+                final_label_readiness
             ),
             "injury_outcome_audit": (
                 injury_audit
