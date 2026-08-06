@@ -13,12 +13,12 @@ import re
 import zipfile
 
 from openpyxl import load_workbook
-from src.audit.entity_registry import (
-    EntityRegistryBuilder,
-)
-from src.audit.research_labels import (
-    ResearchLabelBuilder,
-)
+
+from src.audit.entity_registry import EntityRegistryBuilder
+from src.audit.research_labels import ResearchLabelBuilder
+from src.audit.physics_readiness import PhysicsReadinessBuilder
+from src.audit.stage_eligibility import StageEligibilityBuilder
+from src.audit.audit_contract import AuditContractValidator
 
 from src.audit.audit_rules import (
     AUDIT_SCHEMA_VERSION,
@@ -3761,13 +3761,13 @@ class CaseAuditor:
         sheets = self._read_workbook(
             paths["excel_export"]
         )
-        entity_registry = (
-            EntityRegistryBuilder().build(
-                case_id=case_id,
-                sheets=sheets,
-                asset_registry=asset_registry,
-            )
+
+        entity_registry = EntityRegistryBuilder().build(
+            case_id=case_id,
+            sheets=sheets,
+            asset_registry=asset_registry,
         )
+
         # ----------------------------------------------------------
         # Variable metadata
         # ----------------------------------------------------------
@@ -3834,21 +3834,32 @@ class CaseAuditor:
         edr_audit = self._audit_edr(
             sheets
         )
-        # ----------------------------------------------------------
-        # Research label registry
-        # ----------------------------------------------------------
 
-        research_labels = (
-            ResearchLabelBuilder().build(
-                case_id=case_id,
-                sheets=sheets,
-                entity_registry=entity_registry,
-                final_label_readiness=(
-                    final_label_readiness
-                ),
-                edr_audit=edr_audit,
-            )
+        research_labels = ResearchLabelBuilder().build(
+            case_id=case_id,
+            sheets=sheets,
+            entity_registry=entity_registry,
+            final_label_readiness=final_label_readiness,
+            edr_audit=edr_audit,
         )
+
+        physics_readiness = PhysicsReadinessBuilder().build(
+            case_id=case_id,
+            sheets=sheets,
+            entity_registry=entity_registry,
+            research_labels=research_labels,
+            occupant_age_audit=occupant_age_audit,
+            edr_audit=edr_audit,
+        )
+
+        stage_eligibility = StageEligibilityBuilder().build(
+            case_id=case_id,
+            entity_registry=entity_registry,
+            variable_registry=variable_registry,
+            research_labels=research_labels,
+            physics_readiness=physics_readiness,
+        )
+
         mechanics_audit = (
             self._audit_crash_mechanics(
                 sheets,
@@ -3890,6 +3901,7 @@ class CaseAuditor:
 
         errors: list[str] = []
         warnings: list[str] = []
+
         unresolved_entity_references = (
             entity_registry.get(
                 "summary",
@@ -3903,34 +3915,42 @@ class CaseAuditor:
         if unresolved_entity_references:
             warnings.append(
                 "Entity registry contains "
-                f"{unresolved_entity_references} "
-                "unresolved reference(s); "
-                "downstream joins require review."
+                f"{unresolved_entity_references} unresolved "
+                "reference(s); downstream joins require review."
             )
-        required_files = {
-            "metadata",
-            "navigation_tree",
-            "asset_registry",
-            "excel_export",
-        }
+
         unresolved_research_labels = (
-            research_labels.get(
-                "summary",
-                {},
-            ).get(
-                "unresolved_label_count",
-                0,
+            research_labels.get("summary", {}).get(
+                "unresolved_label_count", 0
             )
         )
 
         if unresolved_research_labels:
             warnings.append(
                 "Research label registry contains "
-                f"{unresolved_research_labels} "
-                "unresolved label reference(s); "
-                "downstream supervision joins "
-                "require review."
+                f"{unresolved_research_labels} unresolved label reference(s); "
+                "downstream supervision joins require review."
             )
+
+        unresolved_physics_entities = (
+            physics_readiness.get("summary", {}).get(
+                "unresolved_entity_count", 0
+            )
+        )
+
+        if unresolved_physics_entities:
+            warnings.append(
+                "Physics readiness contains "
+                f"{unresolved_physics_entities} unresolved entity reference(s)."
+            )
+
+        required_files = {
+            "metadata",
+            "navigation_tree",
+            "asset_registry",
+            "excel_export",
+        }
+
         missing_files = [
             name
             for name, information
@@ -4245,22 +4265,15 @@ class CaseAuditor:
                 )
             ),
             "workbook": workbook_audit,
-            # Legacy entity count summary retained for
-            # backward compatibility.
             "entities": (
                 self._entity_summary(
                     sheets
                 )
             ),
-
-            "entity_registry": (
-                entity_registry
-            ),
-
-            "research_labels": (
-                research_labels
-            ),
-
+            "entity_registry": entity_registry,
+            "research_labels": research_labels,
+            "physics_readiness": physics_readiness,
+            "stage_eligibility": stage_eligibility,
             "relational_integrity": (
                 relational_audit
             ),
@@ -4311,6 +4324,32 @@ class CaseAuditor:
             },
         }
 
+        # Validate the completed Stage-2 metadata contract before saving.
+        contract = AuditContractValidator().validate(audit)
+        audit["audit_contract"] = contract
+
+        if contract["errors"]:
+            audit["audit_summary"]["errors"].extend(contract["errors"])
+        if contract["warnings"]:
+            audit["audit_summary"]["warnings"].extend(contract["warnings"])
+
+        audit["audit_summary"]["error_count"] = len(
+            audit["audit_summary"]["errors"]
+        )
+        audit["audit_summary"]["warning_count"] = len(
+            audit["audit_summary"]["warnings"]
+        )
+        audit["audit_summary"]["passed"] = not audit["audit_summary"][
+            "errors"
+        ]
+
+        if audit["audit_summary"]["errors"]:
+            audit["status"] = "audit_failed"
+        elif audit["audit_summary"]["warnings"]:
+            audit["status"] = "audit_passed_with_warnings"
+        else:
+            audit["status"] = "audit_passed"
+
         # ----------------------------------------------------------
         # Save and report
         # ----------------------------------------------------------
@@ -4326,7 +4365,7 @@ class CaseAuditor:
         )
 
         print(
-            f"Status: {status}"
+            f"Status: {audit['status']}"
         )
 
         print(
@@ -4335,8 +4374,10 @@ class CaseAuditor:
         )
 
         print(
-            f"Audit errors: {len(errors)}; "
-            f"warnings: {len(warnings)}"
+            "Audit errors: "
+            f"{audit['audit_summary']['error_count']}; "
+            "warnings: "
+            f"{audit['audit_summary']['warning_count']}"
         )
 
         return audit

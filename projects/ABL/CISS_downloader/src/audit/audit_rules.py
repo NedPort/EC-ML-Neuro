@@ -2,319 +2,144 @@
 Definitions used by the CISS case auditor.
 """
 
-"""
-Definitions used by the CISS case auditor.
-"""
-
-AUDIT_SCHEMA_VERSION = "2.5"
+AUDIT_SCHEMA_VERSION = "2.9"
 
 VARIABLE_REGISTRY_VERSION = "1.3"
 
 ENTITY_REGISTRY_VERSION = "1.0"
 
-RESEARCH_LABEL_REGISTRY_VERSION = "1.0"
+RESEARCH_LABEL_REGISTRY_VERSION = "1.1"
 
-# Stage-2 definitions for potential model supervision.
-#
-# The presence of a value in the workbook does not
-# automatically make it training-ready. Row-level
-# sentinel and outcome-readiness checks are performed
-# by ResearchLabelBuilder.
+PHYSICS_READINESS_REGISTRY_VERSION = "1.1"
 
+STAGE_ELIGIBILITY_REGISTRY_VERSION = "1.0"
+
+AUDIT_CONTRACT_VERSION = "1.0"
+
+
+# Stage-2 label definitions describe potential supervision targets.  Their
+# presence in a worksheet does not make them training-ready; the label builder
+# applies row-level sentinel and outcome-readiness checks.
 RESEARCH_LABEL_DEFINITIONS = {
-    # --------------------------------------------------------------
-    # Final occupant injury labels
-    # --------------------------------------------------------------
-
     "OCC.INJNUM": {
-        "canonical_name": (
-            "reported_injury_count"
-        ),
-        "label_family": (
-            "injury_outcome"
-        ),
-        "training_role": (
-            "final_label"
-        ),
+        "canonical_name": "reported_injury_count",
+        "label_family": "injury_outcome",
+        "training_role": "final_label",
         "entity_type": "occupant",
         "unit": "count",
-        "downstream_stages": (
-            8,
-            9,
-        ),
+        "downstream_stages": (8, 9),
     },
-
     "OCC.INJSTATUS": {
-        "canonical_name": (
-            "injury_status"
-        ),
-        "label_family": (
-            "injury_outcome"
-        ),
-        "training_role": (
-            "final_label"
-        ),
+        "canonical_name": "injury_status",
+        "label_family": "injury_outcome",
+        "training_role": "final_label",
         "entity_type": "occupant",
         "unit": "ciss_code",
-        "downstream_stages": (
-            8,
-            9,
-        ),
+        "downstream_stages": (8, 9),
     },
-
     "OCC.MAIS": {
-        "canonical_name": (
-            "maximum_ais"
-        ),
-        "label_family": (
-            "injury_severity"
-        ),
-        "training_role": (
-            "final_label"
-        ),
+        "canonical_name": "maximum_ais",
+        "label_family": "injury_severity",
+        "training_role": "final_label",
         "entity_type": "occupant",
         "unit": "ais_level",
-        "downstream_stages": (
-            8,
-            9,
-        ),
+        "downstream_stages": (8, 9),
     },
-
     "OCC.ISS": {
-        "canonical_name": (
-            "injury_severity_score"
-        ),
-        "label_family": (
-            "injury_severity"
-        ),
-        "training_role": (
-            "final_label"
-        ),
+        "canonical_name": "injury_severity_score",
+        "label_family": "injury_severity",
+        "training_role": "final_label",
         "entity_type": "occupant",
         "unit": "score",
-        "downstream_stages": (
-            8,
-            9,
-        ),
+        "downstream_stages": (8, 9),
     },
-
     "OCC.MORTALITY": {
-        "canonical_name": (
-            "mortality_status"
-        ),
-        "label_family": (
-            "medical_outcome"
-        ),
-        "training_role": (
-            "final_label"
-        ),
+        "canonical_name": "mortality_status",
+        "label_family": "medical_outcome",
+        "training_role": "final_label",
         "entity_type": "occupant",
         "unit": "ciss_code",
-        "downstream_stages": (
-            8,
-            9,
-        ),
+        "downstream_stages": (8, 9),
     },
-
     "OCC.TREATMENT": {
-        "canonical_name": (
-            "treatment_status"
-        ),
-        "label_family": (
-            "medical_outcome"
-        ),
-        "training_role": (
-            "final_label"
-        ),
+        "canonical_name": "treatment_status",
+        "label_family": "medical_outcome",
+        "training_role": "final_label",
         "entity_type": "occupant",
         "unit": "ciss_code",
-        "downstream_stages": (
-            8,
-            9,
-        ),
+        "downstream_stages": (8, 9),
     },
-
-    # --------------------------------------------------------------
-    # Vehicle crash-mechanics labels
-    # --------------------------------------------------------------
-
     "GV.DVTOTAL": {
-        "canonical_name": (
-            "delta_v_total"
-        ),
-        "label_family": (
-            "crash_mechanics"
-        ),
-        "training_role": (
-            "intermediate_label"
-        ),
+        "canonical_name": "delta_v_total",
+        "label_family": "crash_mechanics",
+        "training_role": "intermediate_label",
         "entity_type": "vehicle",
         "unit": "km/h",
-        "downstream_stages": (
-            3,
-            4,
-            5,
-        ),
+        "downstream_stages": (3, 4, 5),
     },
-
     "GV.DVLONG": {
-        "canonical_name": (
-            "delta_v_longitudinal"
-        ),
-        "label_family": (
-            "crash_mechanics"
-        ),
-        "training_role": (
-            "intermediate_label"
-        ),
+        "canonical_name": "delta_v_longitudinal",
+        "label_family": "crash_mechanics",
+        "training_role": "intermediate_label",
         "entity_type": "vehicle",
         "unit": "km/h",
-        "downstream_stages": (
-            3,
-            4,
-            5,
-        ),
+        "downstream_stages": (3, 4, 5),
     },
-
     "GV.DVLAT": {
-        "canonical_name": (
-            "delta_v_lateral"
-        ),
-        "label_family": (
-            "crash_mechanics"
-        ),
-        "training_role": (
-            "intermediate_label"
-        ),
+        "canonical_name": "delta_v_lateral",
+        "label_family": "crash_mechanics",
+        "training_role": "intermediate_label",
         "entity_type": "vehicle",
         "unit": "km/h",
-        "downstream_stages": (
-            3,
-            4,
-            5,
-        ),
+        "downstream_stages": (3, 4, 5),
     },
-
-    # --------------------------------------------------------------
-    # CDC reconstruction labels
-    # --------------------------------------------------------------
-
     "CDC.DVTOTAL": {
-        "canonical_name": (
-            "delta_v_total"
-        ),
-        "label_family": (
-            "crash_mechanics"
-        ),
-        "training_role": (
-            "intermediate_label"
-        ),
+        "canonical_name": "delta_v_total",
+        "label_family": "crash_mechanics",
+        "training_role": "intermediate_label",
         "entity_type": "vehicle",
         "unit": "km/h",
-        "downstream_stages": (
-            3,
-            4,
-            5,
-        ),
+        "downstream_stages": (3, 4, 5),
     },
-
     "CDC.DVLONG": {
-        "canonical_name": (
-            "delta_v_longitudinal"
-        ),
-        "label_family": (
-            "crash_mechanics"
-        ),
-        "training_role": (
-            "intermediate_label"
-        ),
+        "canonical_name": "delta_v_longitudinal",
+        "label_family": "crash_mechanics",
+        "training_role": "intermediate_label",
         "entity_type": "vehicle",
         "unit": "km/h",
-        "downstream_stages": (
-            3,
-            4,
-            5,
-        ),
+        "downstream_stages": (3, 4, 5),
     },
-
     "CDC.DVLAT": {
-        "canonical_name": (
-            "delta_v_lateral"
-        ),
-        "label_family": (
-            "crash_mechanics"
-        ),
-        "training_role": (
-            "intermediate_label"
-        ),
+        "canonical_name": "delta_v_lateral",
+        "label_family": "crash_mechanics",
+        "training_role": "intermediate_label",
         "entity_type": "vehicle",
         "unit": "km/h",
-        "downstream_stages": (
-            3,
-            4,
-            5,
-        ),
+        "downstream_stages": (3, 4, 5),
     },
-
     "CDC.PDOF": {
-        "canonical_name": (
-            "principal_direction_of_force"
-        ),
-        "label_family": (
-            "crash_mechanics"
-        ),
-        "training_role": (
-            "intermediate_label"
-        ),
+        "canonical_name": "principal_direction_of_force",
+        "label_family": "crash_mechanics",
+        "training_role": "intermediate_label",
         "entity_type": "vehicle",
         "unit": "degree",
-        "downstream_stages": (
-            3,
-            4,
-            5,
-        ),
+        "downstream_stages": (3, 4, 5),
     },
-
-    # --------------------------------------------------------------
-    # EDR intermediate labels
-    # --------------------------------------------------------------
-
     "EDREVENT.MAXDVLONG": {
-        "canonical_name": (
-            "edr_max_delta_v_longitudinal"
-        ),
-        "label_family": (
-            "edr_crash_mechanics"
-        ),
-        "training_role": (
-            "intermediate_label"
-        ),
+        "canonical_name": "edr_max_delta_v_longitudinal",
+        "label_family": "edr_crash_mechanics",
+        "training_role": "intermediate_label",
         "entity_type": "edr_event",
         "unit": "km/h",
-        "downstream_stages": (
-            3,
-            4,
-            5,
-        ),
+        "downstream_stages": (3, 4, 5),
     },
-
     "EDREVENT.MAXDVLAT": {
-        "canonical_name": (
-            "edr_max_delta_v_lateral"
-        ),
-        "label_family": (
-            "edr_crash_mechanics"
-        ),
-        "training_role": (
-            "intermediate_label"
-        ),
+        "canonical_name": "edr_max_delta_v_lateral",
+        "label_family": "edr_crash_mechanics",
+        "training_role": "intermediate_label",
         "entity_type": "edr_event",
         "unit": "km/h",
-        "downstream_stages": (
-            3,
-            4,
-            5,
-        ),
+        "downstream_stages": (3, 4, 5),
     },
 }
 
