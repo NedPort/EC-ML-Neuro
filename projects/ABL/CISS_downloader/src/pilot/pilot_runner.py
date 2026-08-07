@@ -11,7 +11,7 @@ from typing import Any, Callable
 
 
 PILOT_MANIFEST_VERSION = "1.0"
-PILOT_SUMMARY_VERSION = "1.0"
+PILOT_SUMMARY_VERSION = "2.1"
 
 
 class PilotRunner:
@@ -179,33 +179,327 @@ class PilotRunner:
         return summary
 
     def build_summary(
-        self, manifest: dict[str, Any] | None = None
+        self,
+        manifest: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Build a dataset-level summary from current pilot case records."""
+        """
+        Build a dataset-level summary from current pilot case records.
+
+        The summary includes:
+
+        - processing and audit-contract results;
+        - warning frequencies and associated case IDs;
+        - stage-eligibility distributions;
+        - observed case profiles;
+        - physics-readiness groups;
+        - injury-label readiness;
+        - research cohorts based on the intersection of physics
+        readiness and reliable injury-label availability.
+        """
 
         manifest = manifest or self.load_manifest()
         records = manifest["cases"]
+
+        # ---------------------------------------------------------
+        # Processing status
+        # ---------------------------------------------------------
+
         processing_counts = Counter(
-            item.get("processing_status", "unknown") for item in records
-        )
-        warning_frequencies = Counter(
-            warning
+            item.get(
+                "processing_status",
+                "unknown",
+            )
             for item in records
-            for warning in item.get("audit_warnings", [])
         )
-        stage_status_counts: dict[str, Counter[str]] = {}
+
+        # ---------------------------------------------------------
+        # Warning aggregation
+        # ---------------------------------------------------------
+
+        warning_frequencies: Counter[str] = Counter()
+        warning_case_ids: dict[str, set[int]] = {}
+
         for item in records:
-            for stage, status in item.get("stage_statuses", {}).items():
-                stage_status_counts.setdefault(stage, Counter())[status] += 1
+            case_id = int(item["case_id"])
+
+            for warning in item.get(
+                "audit_warnings",
+                [],
+            ):
+                warning_frequencies[warning] += 1
+
+                warning_case_ids.setdefault(
+                    warning,
+                    set(),
+                ).add(case_id)
+
+        warning_details = [
+            {
+                "warning": warning,
+                "count": count,
+                "case_ids": sorted(
+                    warning_case_ids.get(
+                        warning,
+                        set(),
+                    )
+                ),
+            }
+            for warning, count in sorted(
+                warning_frequencies.items(),
+                key=lambda pair: (
+                    -pair[1],
+                    pair[0],
+                ),
+            )
+        ]
+
+        # ---------------------------------------------------------
+        # Structured contradiction aggregation
+        # ---------------------------------------------------------
+
+        contradiction_variable_counts: Counter[str] = Counter()
+        contradiction_case_ids: dict[str, set[int]] = {}
+        contradiction_details: list[dict[str, Any]] = []
+
+        for item in records:
+            case_id = int(item["case_id"])
+
+            for contradiction in item.get(
+                "contradictions",
+                [],
+            ):
+                if not isinstance(contradiction, dict):
+                    continue
+
+                variable = str(
+                    contradiction.get("variable")
+                    or "unspecified"
+                )
+                contradiction_variable_counts[variable] += 1
+                contradiction_case_ids.setdefault(
+                    variable,
+                    set(),
+                ).add(case_id)
+                contradiction_details.append(
+                    {
+                        "case_id": case_id,
+                        **contradiction,
+                    }
+                )
+
+        contradiction_summary = {
+            "contradiction_count": len(contradiction_details),
+            "affected_case_count": len(
+                {
+                    int(item["case_id"])
+                    for item in contradiction_details
+                }
+            ),
+            "affected_case_ids": sorted(
+                {
+                    int(item["case_id"])
+                    for item in contradiction_details
+                }
+            ),
+            "by_variable": {
+                variable: {
+                    "count": count,
+                    "case_ids": sorted(
+                        contradiction_case_ids.get(
+                            variable,
+                            set(),
+                        )
+                    ),
+                }
+                for variable, count in sorted(
+                    contradiction_variable_counts.items()
+                )
+            },
+            "details": sorted(
+                contradiction_details,
+                key=lambda item: (
+                    int(item["case_id"]),
+                    str(item.get("variable", "")),
+                ),
+            ),
+        }
+
+        # ---------------------------------------------------------
+        # Variable-level availability aggregation
+        # ---------------------------------------------------------
+
+        availability_by_variable: dict[str, Counter[str]] = {}
+        usability_by_variable: dict[str, Counter[str]] = {}
+        available_case_ids: dict[str, set[int]] = {}
+        evaluated_case_ids: dict[str, set[int]] = {}
+
+        for item in records:
+            case_id = int(item["case_id"])
+            availability = item.get(
+                "variable_availability",
+                {},
+            )
+            usability = item.get(
+                "variable_training_usability",
+                {},
+            )
+
+            if not isinstance(availability, dict):
+                continue
+
+            for variable_id, status in availability.items():
+                variable_id = str(variable_id)
+                status = str(status or "unknown")
+                availability_by_variable.setdefault(
+                    variable_id,
+                    Counter(),
+                )[status] += 1
+                evaluated_case_ids.setdefault(
+                    variable_id,
+                    set(),
+                ).add(case_id)
+
+                if status == "available":
+                    available_case_ids.setdefault(
+                        variable_id,
+                        set(),
+                    ).add(case_id)
+
+                training_status = str(
+                    usability.get(variable_id)
+                    or "unknown"
+                )
+                usability_by_variable.setdefault(
+                    variable_id,
+                    Counter(),
+                )[training_status] += 1
+
+        variable_availability_summary = {
+            "registered_case_count": len(records),
+            "variable_count": len(availability_by_variable),
+            "variables": {
+                variable_id: {
+                    "evaluated_case_count": len(
+                        evaluated_case_ids.get(
+                            variable_id,
+                            set(),
+                        )
+                    ),
+                    "available_case_count": len(
+                        available_case_ids.get(
+                            variable_id,
+                            set(),
+                        )
+                    ),
+                    "availability_rate": round(
+                        len(
+                            available_case_ids.get(
+                                variable_id,
+                                set(),
+                            )
+                        )
+                        / len(records),
+                        6,
+                    )
+                    if records
+                    else 0.0,
+                    "availability_status_counts": dict(
+                        sorted(
+                            availability_by_variable[
+                                variable_id
+                            ].items()
+                        )
+                    ),
+                    "training_usability_counts": dict(
+                        sorted(
+                            usability_by_variable.get(
+                                variable_id,
+                                Counter(),
+                            ).items()
+                        )
+                    ),
+                    "available_case_ids": sorted(
+                        available_case_ids.get(
+                            variable_id,
+                            set(),
+                        )
+                    ),
+                }
+                for variable_id in sorted(
+                    availability_by_variable
+                )
+            },
+        }
+
+        # ---------------------------------------------------------
+        # Stage eligibility
+        # ---------------------------------------------------------
+
+        stage_status_counts: dict[
+            str,
+            Counter[str],
+        ] = {}
+
+        stage_case_ids: dict[
+            str,
+            dict[str, list[int]],
+        ] = {}
+
+        for item in records:
+            case_id = int(item["case_id"])
+
+            for stage, status in item.get(
+                "stage_statuses",
+                {},
+            ).items():
+                stage_status_counts.setdefault(
+                    stage,
+                    Counter(),
+                )[status] += 1
+
+                stage_case_ids.setdefault(
+                    stage,
+                    {},
+                ).setdefault(
+                    status,
+                    [],
+                ).append(case_id)
+
+        stage_status_details = {
+            stage: {
+                status: {
+                    "count": count,
+                    "case_ids": sorted(
+                        stage_case_ids
+                        .get(stage, {})
+                        .get(status, [])
+                    ),
+                }
+                for status, count in sorted(
+                    counts.items()
+                )
+            }
+            for stage, counts in sorted(
+                stage_status_counts.items()
+            )
+        }
+
+        # ---------------------------------------------------------
+        # Contract and processing failures
+        # ---------------------------------------------------------
 
         contract_failures = [
             {
                 "case_id": item["case_id"],
-                "errors": item.get("contract_errors", []),
+                "errors": item.get(
+                    "contract_errors",
+                    [],
+                ),
             }
             for item in records
             if item.get("contract_passed") is False
         ]
+
         processing_failures = [
             {
                 "case_id": item["case_id"],
@@ -214,57 +508,548 @@ class PilotRunner:
             for item in records
             if item.get("processing_status") == "failed"
         ]
+
+        # ---------------------------------------------------------
+        # Observed profile aggregation
+        # ---------------------------------------------------------
+
         profile_counts = Counter(
-            reason
+            profile
             for item in records
-            for reason in item.get("observed_profile", [])
+            for profile in item.get(
+                "observed_profile",
+                [],
+            )
         )
+
+        profile_case_ids: dict[str, list[int]] = {}
+
+        for item in records:
+            case_id = int(item["case_id"])
+
+            for profile in item.get(
+                "observed_profile",
+                [],
+            ):
+                profile_case_ids.setdefault(
+                    profile,
+                    [],
+                ).append(case_id)
+
+        observed_profile_details = {
+            profile: {
+                "count": profile_counts[profile],
+                "case_ids": sorted(
+                    profile_case_ids.get(
+                        profile,
+                        [],
+                    )
+                ),
+            }
+            for profile in sorted(profile_counts)
+        }
+
+        # ---------------------------------------------------------
+        # Physics and label readiness
+        # ---------------------------------------------------------
+
+        full_pulse_driven_ids: list[int] = []
+        pulse_validation_required_ids: list[int] = []
+        simplified_physics_ids: list[int] = []
+        insufficient_physics_ids: list[int] = []
+
+        reliable_label_ids: list[int] = []
+        unreliable_label_ids: list[int] = []
+
+        physics_and_labels_ids: list[int] = []
+        physics_without_labels_ids: list[int] = []
+        labels_without_physics_ids: list[int] = []
+        neither_ids: list[int] = []
+
+        readiness_level_pair_counts: Counter[str] = Counter()
+        readiness_level_case_ids: dict[str, set[int]] = {}
+        capability_pair_counts: Counter[str] = Counter()
+        capability_case_ids: dict[str, set[int]] = {}
+
+        for item in records:
+            case_id = int(item["case_id"])
+
+            for level, count in item.get(
+                "physics_readiness_levels",
+                {},
+            ).items():
+                numeric_count = int(count or 0)
+                readiness_level_pair_counts[level] += numeric_count
+                if numeric_count:
+                    readiness_level_case_ids.setdefault(
+                        level,
+                        set(),
+                    ).add(case_id)
+
+            for capability, count in item.get(
+                "physics_capability_pair_counts",
+                {},
+            ).items():
+                numeric_count = int(count or 0)
+                capability_pair_counts[capability] += numeric_count
+                if numeric_count:
+                    capability_case_ids.setdefault(
+                        capability,
+                        set(),
+                    ).add(case_id)
+
+            profiles = set(
+                item.get(
+                    "observed_profile",
+                    [],
+                )
+            )
+
+            stage_statuses = item.get(
+                "stage_statuses",
+                {},
+            )
+
+            stage_4_status = stage_statuses.get(
+                "stage_4_physics_parameter_construction"
+            )
+
+            physics_supported = (
+                stage_4_status == "eligible"
+            )
+
+            pulse_candidate = (
+                "edr_pulse_candidate" in profiles
+            )
+            pulse_simulation_ready = bool(
+                item.get(
+                    "edr_pulse_simulation_ready",
+                    False,
+                )
+            )
+
+            reliable_labels = (
+                "reliable_final_labels" in profiles
+            )
+
+            # Physics readiness level
+            if physics_supported and pulse_simulation_ready:
+                full_pulse_driven_ids.append(case_id)
+
+            elif physics_supported and pulse_candidate:
+                pulse_validation_required_ids.append(case_id)
+
+            elif physics_supported:
+                simplified_physics_ids.append(case_id)
+
+            else:
+                insufficient_physics_ids.append(case_id)
+
+            # Injury-label readiness
+            if reliable_labels:
+                reliable_label_ids.append(case_id)
+            else:
+                unreliable_label_ids.append(case_id)
+
+            # Research cohort
+            if physics_supported and reliable_labels:
+                physics_and_labels_ids.append(case_id)
+
+            elif physics_supported and not reliable_labels:
+                physics_without_labels_ids.append(case_id)
+
+            elif not physics_supported and reliable_labels:
+                labels_without_physics_ids.append(case_id)
+
+            else:
+                neither_ids.append(case_id)
+
+        def cohort_summary(
+            case_ids: list[int],
+        ) -> dict[str, Any]:
+            """Create a count and sorted case-ID list."""
+
+            sorted_case_ids = sorted(
+                set(case_ids)
+            )
+
+            return {
+                "count": len(sorted_case_ids),
+                "case_ids": sorted_case_ids,
+            }
+
+        physics_readiness_summary = {
+            "full_pulse_driven": cohort_summary(
+                full_pulse_driven_ids
+            ),
+            "pulse_candidate_requires_validation": cohort_summary(
+                pulse_validation_required_ids
+            ),
+            "simplified_parameter_based": cohort_summary(
+                simplified_physics_ids
+            ),
+            "insufficient": cohort_summary(
+                insufficient_physics_ids
+            ),
+            "audited_pair_readiness_levels": {
+                level: {
+                    "pair_count": count,
+                    "case_ids": sorted(
+                        readiness_level_case_ids.get(
+                            level,
+                            set(),
+                        )
+                    ),
+                }
+                for level, count in sorted(
+                    readiness_level_pair_counts.items()
+                )
+            },
+            "audited_capabilities": {
+                capability: {
+                    "pair_count": count,
+                    "case_ids": sorted(
+                        capability_case_ids.get(
+                            capability,
+                            set(),
+                        )
+                    ),
+                }
+                for capability, count in sorted(
+                    capability_pair_counts.items()
+                )
+            },
+            "interpretation": {
+                "full_pulse_driven": (
+                    "Stage 4 inputs and a simulation-ready EDR "
+                    "pulse are available."
+                ),
+                "pulse_candidate_requires_validation": (
+                    "Stage 4 inputs and an EDR pulse candidate "
+                    "are available, but unit, time-axis, event, or "
+                    "signal validation is still required before "
+                    "simulation."
+                ),
+                "simplified_parameter_based": (
+                    "Stage 4 inputs are available, but a reliable "
+                    "EDR pulse candidate is unavailable. These cases "
+                    "may support Delta-V/PDOF-based or other "
+                    "simplified physics models."
+                ),
+                "insufficient": (
+                    "Current audited inputs are insufficient for "
+                    "Stage 4 physics-parameter construction."
+                ),
+            },
+        }
+
+        label_readiness_summary = {
+            "reliable": cohort_summary(
+                reliable_label_ids
+            ),
+            "unavailable_or_unreliable": cohort_summary(
+                unreliable_label_ids
+            ),
+        }
+
+        research_cohorts = {
+            "physics_and_labels": {
+                **cohort_summary(
+                    physics_and_labels_ids
+                ),
+                "purpose": (
+                    "Primary cohort for supervised "
+                    "physics-informed injury prediction."
+                ),
+            },
+            "physics_without_labels": {
+                **cohort_summary(
+                    physics_without_labels_ids
+                ),
+                "purpose": (
+                    "Physics reconstruction, intermediate-variable "
+                    "learning, and unsupervised analysis."
+                ),
+            },
+            "labels_without_physics": {
+                **cohort_summary(
+                    labels_without_physics_ids
+                ),
+                "purpose": (
+                    "Conventional injury prediction, missing-input "
+                    "analysis, or physics-input imputation."
+                ),
+            },
+            "neither": {
+                **cohort_summary(
+                    neither_ids
+                ),
+                "purpose": (
+                    "Potentially useful for image, document, or "
+                    "descriptive studies, but not currently eligible "
+                    "for the primary structured physics-informed task."
+                ),
+            },
+        }
+
+        # ---------------------------------------------------------
+        # Final summary
+        # ---------------------------------------------------------
 
         return {
             "summary_version": PILOT_SUMMARY_VERSION,
             "pilot_id": manifest["pilot_id"],
             "created_at": self._utc_now(),
-            "target_case_count": manifest["target_case_count"],
+            "target_case_count": manifest[
+                "target_case_count"
+            ],
             "registered_case_count": len(records),
-            "processing_status_counts": dict(sorted(processing_counts.items())),
-            "contract_pass_count": sum(
-                item.get("contract_passed") is True for item in records
+            "processing_status_counts": dict(
+                sorted(
+                    processing_counts.items()
+                )
             ),
-            "contract_failure_count": len(contract_failures),
+            "contract_pass_count": sum(
+                item.get("contract_passed") is True
+                for item in records
+            ),
+            "contract_failure_count": len(
+                contract_failures
+            ),
             "contract_failures": contract_failures,
             "processing_failures": processing_failures,
             "warning_frequencies": dict(
-                sorted(warning_frequencies.items(), key=lambda pair: (-pair[1], pair[0]))
+                sorted(
+                    warning_frequencies.items(),
+                    key=lambda pair: (
+                        -pair[1],
+                        pair[0],
+                    ),
+                )
+            ),
+            "warning_details": warning_details,
+            "contradiction_summary": contradiction_summary,
+            "variable_availability_summary": (
+                variable_availability_summary
             ),
             "stage_status_counts": {
-                stage: dict(sorted(counts.items()))
-                for stage, counts in sorted(stage_status_counts.items())
+                stage: dict(
+                    sorted(counts.items())
+                )
+                for stage, counts in sorted(
+                    stage_status_counts.items()
+                )
             },
-            "observed_profile_counts": dict(sorted(profile_counts.items())),
+            "stage_status_details": (
+                stage_status_details
+            ),
+            "observed_profile_counts": dict(
+                sorted(profile_counts.items())
+            ),
+            "observed_profile_details": (
+                observed_profile_details
+            ),
+            "physics_readiness_summary": (
+                physics_readiness_summary
+            ),
+            "label_readiness_summary": (
+                label_readiness_summary
+            ),
+            "research_cohorts": research_cohorts,
             "cases": [
                 {
                     "case_id": item["case_id"],
-                    "processing_status": item.get("processing_status"),
-                    "contract_passed": item.get("contract_passed"),
-                    "observed_profile": item.get("observed_profile", []),
-                    "last_error": item.get("last_error"),
+                    "processing_status": item.get(
+                        "processing_status"
+                    ),
+                    "contract_passed": item.get(
+                        "contract_passed"
+                    ),
+                    "observed_profile": item.get(
+                        "observed_profile",
+                        [],
+                    ),
+                    "stage_statuses": item.get(
+                        "stage_statuses",
+                        {},
+                    ),
+                    "audit_warning_count": len(
+                        item.get(
+                            "audit_warnings",
+                            [],
+                        )
+                    ),
+                    "audit_warnings": item.get(
+                        "audit_warnings",
+                        [],
+                    ),
+                    "contradiction_count": len(
+                        item.get(
+                            "contradictions",
+                            [],
+                        )
+                    ),
+                    "edr_pulse_candidate_available": item.get(
+                        "edr_pulse_candidate_available",
+                        False,
+                    ),
+                    "edr_pulse_simulation_ready": item.get(
+                        "edr_pulse_simulation_ready",
+                        False,
+                    ),
+                    "last_error": item.get(
+                        "last_error"
+                    ),
                 }
                 for item in records
             ],
         }
 
     def save_summary(self) -> dict[str, Any]:
-        """Rebuild and persist the pilot summary without processing cases."""
+        """
+        Refresh completed audits and persist the pilot summary.
 
-        summary = self.build_summary()
-        self._save_json(summary, self.summary_path)
+        No cases are downloaded or processed again.
+        """
+
+        manifest = self.load_manifest()
+
+        self._refresh_completed_audits(
+            manifest
+        )
+
+        manifest["updated_at"] = (
+            self._utc_now()
+        )
+
+        self._validate_manifest(
+            manifest
+        )
+
+        self._save_json(
+            manifest,
+            self.manifest_path,
+        )
+
+        summary = self.build_summary(
+            manifest
+        )
+
+        self._save_json(
+            summary,
+            self.summary_path,
+        )
+
         return summary
+    def _refresh_completed_audits(
+        self,
+        manifest: dict[str, Any],
+    ) -> None:
+        """
+        Refresh cached pilot fields using current case_audit.json files.
 
+        This method does not download, acquire, or rerun cases.
+        It only synchronizes pilot_cases.json with the latest audits.
+        """
+
+        for case_record in manifest.get(
+            "cases",
+            [],
+        ):
+            case_id = int(
+                case_record["case_id"]
+            )
+
+            audit_path = (
+                self.data_root
+                / "processed"
+                / str(case_id)
+                / "audit"
+                / "case_audit.json"
+            )
+
+            if not audit_path.exists():
+                continue
+
+            with audit_path.open(
+                "r",
+                encoding="utf-8",
+            ) as input_file:
+                audit = json.load(
+                    input_file
+                )
+
+            audit_case_id = int(
+                audit.get(
+                    "case_id",
+                    case_id,
+                )
+            )
+
+            if audit_case_id != case_id:
+                raise ValueError(
+                    "Pilot audit case ID mismatch: "
+                    f"manifest={case_id}, "
+                    f"audit={audit_case_id}, "
+                    f"path={audit_path}"
+                )
+
+            # Preserve the original processing-completion time.
+            previous_completed_at = (
+                case_record.get(
+                    "completed_at"
+                )
+            )
+
+            self._apply_audit_result(
+                case_record,
+                audit,
+            )
+
+            if previous_completed_at is not None:
+                case_record[
+                    "completed_at"
+                ] = previous_completed_at
+
+            case_record[
+                "audit_source_path"
+            ] = audit_path.as_posix()
+
+            case_record[
+                "audit_refreshed_at"
+            ] = self._utc_now()
+                
     def _apply_audit_result(
         self, case_record: dict[str, Any], audit: dict[str, Any]
     ) -> None:
         contract = audit.get("audit_contract", {})
         stages = audit.get("stage_eligibility", {}).get("stages", {})
+        contradictions = audit.get(
+            "cross_source_contradictions",
+            {},
+        ).get("contradictions", [])
+        if not isinstance(contradictions, list):
+            contradictions = []
+
+        variable_registry = audit.get(
+            "variable_registry",
+            {},
+        )
+        variables = variable_registry.get(
+            "variables",
+            {},
+        )
+        if not isinstance(variables, dict):
+            variables = {}
+
+        edr_audit = audit.get(
+            "edr_quality_audit",
+            {},
+        )
+        physics_summary = audit.get(
+            "physics_readiness",
+            {},
+        ).get("summary", {})
         case_record.update(
             {
                 "processing_status": (
@@ -282,6 +1067,49 @@ class PilotRunner:
                 ),
                 "audit_warnings": audit.get("audit_summary", {}).get(
                     "warnings", []
+                ),
+                "contradictions": contradictions,
+                "variable_availability": {
+                    variable_id: variable.get(
+                        "availability",
+                        "unknown",
+                    )
+                    for variable_id, variable in variables.items()
+                    if isinstance(variable, dict)
+                },
+                "variable_training_usability": {
+                    variable_id: variable.get(
+                        "training_usability",
+                        "unknown",
+                    )
+                    for variable_id, variable in variables.items()
+                    if isinstance(variable, dict)
+                },
+                "physics_readiness_levels": physics_summary.get(
+                    "readiness_levels",
+                    {},
+                ),
+                "physics_capability_pair_counts": physics_summary.get(
+                    "capability_pair_counts",
+                    {},
+                ),
+                "edr_pulse_candidate_available": bool(
+                    edr_audit.get(
+                        "pulse_candidate_available",
+                        False,
+                    )
+                ),
+                "edr_pulse_simulation_ready": bool(
+                    edr_audit.get(
+                        "pulse_ready_for_simulation",
+                        False,
+                    )
+                ),
+                "edr_unit_validation_required": bool(
+                    edr_audit.get(
+                        "unit_validation_required",
+                        False,
+                    )
                 ),
                 "stage_statuses": {
                     name: stage.get("status")

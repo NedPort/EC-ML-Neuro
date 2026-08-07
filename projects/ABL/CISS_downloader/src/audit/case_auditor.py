@@ -1538,7 +1538,137 @@ class CaseAuditor:
                 agreement_status
             ),
         }
+    def _interpret_edr_availability(
+        self,
+        collection_rows,
+        summary_rows,
+        event_rows,
+    ):
+        """
+        Distinguish an EDR collection record from confirmation
+        that usable EDR data were actually obtained.
+        """
 
+        collection_record_present = bool(
+            collection_rows
+        )
+        summary_records_available = bool(
+            summary_rows
+        )
+        event_records_available = bool(
+            event_rows
+        )
+
+        positive_terms = (
+            "yes",
+            "obtained",
+            "data entered",
+            "downloaded",
+            "collected",
+        )
+
+        negative_terms = (
+            "not available",
+            "unavailable",
+            "not obtained",
+            "no data",
+            "not collected",
+            "unknown",
+        )
+
+        reported_state = None
+        reported_text = None
+
+        for record in collection_rows:
+            text_value = (
+                record.get("EDROBTAINEDTEXT")
+                or record.get(
+                    "EDROBTAINED_TEXT"
+                )
+                or ""
+            )
+
+            normalized_text = (
+                str(text_value)
+                .strip()
+                .lower()
+            )
+
+            if not normalized_text:
+                continue
+
+            reported_text = str(
+                text_value
+            ).strip()
+
+            if any(
+                term in normalized_text
+                for term in negative_terms
+            ):
+                reported_state = False
+                break
+
+            if any(
+                term in normalized_text
+                for term in positive_terms
+            ):
+                reported_state = True
+                break
+
+        records_confirm_availability = (
+            summary_records_available
+            or event_records_available
+        )
+
+        if records_confirm_availability:
+            edr_obtained = True
+            determination = (
+                "confirmed_by_edr_records"
+            )
+
+        elif reported_state is True:
+            edr_obtained = True
+            determination = (
+                "reported_obtained"
+            )
+
+        elif reported_state is False:
+            edr_obtained = False
+            determination = (
+                "reported_not_obtained"
+            )
+
+        elif collection_record_present:
+            edr_obtained = False
+            determination = (
+                "collection_record_ambiguous"
+            )
+
+        else:
+            edr_obtained = False
+            determination = (
+                "no_collection_information"
+            )
+
+        return {
+            "collection_record_present": (
+                collection_record_present
+            ),
+            "edr_obtained_reported": (
+                reported_state
+            ),
+            "edr_obtained_reported_text": (
+                reported_text
+            ),
+            "summary_records_available": (
+                summary_records_available
+            ),
+            "event_records_available": (
+                event_records_available
+            ),
+            "edr_obtained": edr_obtained,
+            "determination": determination,
+        }
     def _audit_edr(self, sheets):
         """
         Audit the actual long-format CISS EDR tables.
@@ -1567,7 +1697,13 @@ class CaseAuditor:
             sheets,
             "EDRPOSTCRASH",
         )
-
+        edr_availability = (
+            self._interpret_edr_availability(
+                collection_rows=collection_rows,
+                summary_rows=summary_rows,
+                event_rows=event_rows,
+            )
+        )
         event_selection = (
             self._select_applicable_edr_event(
                 event_rows
@@ -1732,9 +1868,40 @@ class CaseAuditor:
         )
 
         return {
-            "edr_obtained": bool(
-                collection_rows
-                or summary_rows
+            "collection_record_present": (
+                edr_availability[
+                    "collection_record_present"
+                ]
+            ),
+            "edr_obtained_reported": (
+                edr_availability[
+                    "edr_obtained_reported"
+                ]
+            ),
+            "edr_obtained_reported_text": (
+                edr_availability[
+                    "edr_obtained_reported_text"
+                ]
+            ),
+            "summary_records_available": (
+                edr_availability[
+                    "summary_records_available"
+                ]
+            ),
+            "event_records_available": (
+                edr_availability[
+                    "event_records_available"
+                ]
+            ),
+            "edr_availability_determination": (
+                edr_availability[
+                    "determination"
+                ]
+            ),
+            "edr_obtained": (
+                edr_availability[
+                    "edr_obtained"
+                ]
             ),
             "declared_event_count": (
                 declared_event_count
@@ -1940,12 +2107,123 @@ class CaseAuditor:
                 }
             )
 
-        reconstructed_values = {
-            observation[
-                "total_delta_v"
+        reconstruction_groups = defaultdict(
+            list
+        )
+
+        for observation in reconstructed:
+            entity_key = (
+                observation.get("case_id"),
+                observation.get(
+                    "vehicle_number"
+                ),
+                observation.get(
+                    "event_number"
+                ),
+            )
+
+            reconstruction_groups[
+                entity_key
+            ].append(
+                observation
+            )
+
+        reconstruction_entities = []
+
+        for (
+            entity_key,
+            observations,
+        ) in reconstruction_groups.items():
+            total_values = {
+                observation.get(
+                    "total_delta_v"
+                )
+                for observation
+                in observations
+                if observation.get(
+                    "total_delta_v"
+                )
+                is not None
+            }
+
+            internally_consistent = (
+                len(total_values) <= 1
+            )
+
+            selected = None
+
+            if (
+                internally_consistent
+                and observations
+            ):
+                selected = next(
+                    (
+                        observation
+                        for observation
+                        in observations
+                        if observation.get(
+                            "source"
+                        )
+                        == "CDC"
+                    ),
+                    observations[0],
+                )
+
+            reconstruction_entities.append(
+                {
+                    "case_id": (
+                        entity_key[0]
+                    ),
+                    "vehicle_number": (
+                        entity_key[1]
+                    ),
+                    "event_number": (
+                        entity_key[2]
+                    ),
+                    "observations": (
+                        observations
+                    ),
+                    "sources": sorted(
+                        {
+                            observation.get(
+                                "source"
+                            )
+                            for observation
+                            in observations
+                        }
+                    ),
+                    "total_delta_v_values": (
+                        sorted(
+                            total_values
+                        )
+                    ),
+                    "internally_consistent": (
+                        internally_consistent
+                    ),
+                    "selected_observation": (
+                        selected
+                    ),
+                }
+            )
+
+        conflicting_entities = [
+            entity
+            for entity
+            in reconstruction_entities
+            if not entity[
+                "internally_consistent"
             ]
-            for observation in reconstructed
-        }
+        ]
+
+        selected_entities = [
+            entity
+            for entity
+            in reconstruction_entities
+            if entity[
+                "selected_observation"
+            ]
+            is not None
+        ]
 
         applicable_edr_values = [
             observation
@@ -1960,16 +2238,21 @@ class CaseAuditor:
         selected_observation = None
         selection_status = "unavailable"
 
-        if (
-            reconstructed
-            and len(
-                reconstructed_values
+        if conflicting_entities:
+            selection_status = (
+                "conflicting_reconstruction_values"
             )
-            == 1
-        ):
-            preferred_total = next(
-                iter(
-                    reconstructed_values
+
+        elif selected_entities:
+            selected_observation = (
+                selected_entities[0][
+                    "selected_observation"
+                ]
+            )
+
+            preferred_total = (
+                selected_observation.get(
+                    "total_delta_v"
                 )
             )
 
@@ -1977,15 +2260,8 @@ class CaseAuditor:
                 "reconstruction"
             )
 
-            selected_observation = (
-                reconstructed[0]
-            )
-
-            selection_status = "selected"
-
-        elif reconstructed:
             selection_status = (
-                "conflicting_reconstruction_values"
+                "selected_per_entity"
             )
 
         elif (
@@ -2014,8 +2290,23 @@ class CaseAuditor:
                 "available": bool(
                     reconstructed
                 ),
+                "observation_count": len(
+                    reconstructed
+                ),
+                "entity_count": len(
+                    reconstruction_entities
+                ),
                 "observations": (
                     reconstructed
+                ),
+                "entities": (
+                    reconstruction_entities
+                ),
+                "conflicting_entity_count": len(
+                    conflicting_entities
+                ),
+                "conflicting_entities": (
+                    conflicting_entities
                 ),
             },
             "edr": {
@@ -2142,9 +2433,21 @@ class CaseAuditor:
         injury_audit,
         mechanics_audit,
     ):
-        contradictions = []
+        """
+        Audit contradictions between related CISS data sources.
 
+        Comparisons must preserve entity and event identity. Values
+        belonging to different vehicles, occupants, seats, or crash
+        events must not automatically be treated as contradictions.
+        """
+
+        contradictions = []
+        contextual_differences = []
+
+        # ---------------------------------------------------------
         # Belt-use consistency
+        # ---------------------------------------------------------
+
         belt_by_vehicle = defaultdict(list)
 
         for record in self._records(
@@ -2167,6 +2470,9 @@ class CaseAuditor:
                     ),
                     "occupant_number": (
                         record.get("OCCNO")
+                    ),
+                    "seat_location": (
+                        record.get("SEATLOC")
                     ),
                 }
             )
@@ -2204,8 +2510,7 @@ class CaseAuditor:
         ):
             usable_states = {
                 observation["value"]
-                for observation
-                in observations
+                for observation in observations
                 if observation["value"]
                 != "unknown"
             }
@@ -2216,47 +2521,89 @@ class CaseAuditor:
                         "variable": "belt_use",
                         "entity": {
                             "case_id": key[0],
-                            "vehicle_number": (
-                                key[1]
-                            ),
+                            "vehicle_number": key[1],
                         },
                         "status": "conflicting",
-                        "observations": (
-                            observations
-                        ),
-                        "resolution": (
-                            "unresolved"
-                        ),
+                        "observations": observations,
+                        "resolution": "unresolved",
                     }
                 )
 
+        # ---------------------------------------------------------
         # Reconstruction Delta-V consistency
-        if (
-            mechanics_audit[
-                "selection_status"
-            ]
-            == (
-                "conflicting_"
-                "reconstruction_values"
-            )
+        # ---------------------------------------------------------
+        #
+        # Compare Delta-V only within the same case, vehicle,
+        # and crash event.
+        # ---------------------------------------------------------
+
+        for entity in mechanics_audit.get(
+            "reconstruction",
+            {},
+        ).get(
+            "conflicting_entities",
+            [],
         ):
             contradictions.append(
                 {
                     "variable": "delta_v",
+                    "entity": {
+                        "case_id": entity.get(
+                            "case_id"
+                        ),
+                        "vehicle_number": (
+                            entity.get(
+                                "vehicle_number"
+                            )
+                        ),
+                        "event_number": (
+                            entity.get(
+                                "event_number"
+                            )
+                        ),
+                    },
                     "status": "conflicting",
-                    "observations": (
-                        mechanics_audit[
-                            "reconstruction"
-                        ]["observations"]
+                    "observations": entity.get(
+                        "observations",
+                        [],
                     ),
-                    "resolution": (
-                        "unresolved"
-                    ),
+                    "resolution": "unresolved",
                 }
             )
 
+        # ---------------------------------------------------------
         # Damage-direction consistency
-        gv_directions = {}
+        # ---------------------------------------------------------
+        #
+        # GV.DAMPLANE generally describes the vehicle-level or
+        # principal damage plane.
+        #
+        # CDC.CDCPLANE may contain one row per damage event.
+        # Therefore, a vehicle can correctly contain multiple CDC
+        # directions. The GV direction must be compared against the
+        # complete event-aware CDC set, not against every CDC row
+        # independently.
+        # ---------------------------------------------------------
+
+        def normalize_event_number(
+            value,
+        ):
+            """Normalize event numbers for safe comparison."""
+
+            if value is None:
+                return None
+
+            text = str(value).strip()
+
+            if not text:
+                return None
+
+            try:
+                return int(float(text))
+            except (TypeError, ValueError):
+                return text
+
+        gv_damage_by_vehicle = {}
 
         for record in self._records(
             sheets,
@@ -2267,14 +2614,23 @@ class CaseAuditor:
                 record.get("VEHNO"),
             )
 
-            gv_directions[key] = (
-                self._direction(
+            gv_damage_by_vehicle[key] = {
+                "direction": self._direction(
                     record.get("DAMPLANE"),
                     record.get(
                         "DAMPLANETEXT"
                     ),
-                )
-            )
+                ),
+                "event_number": (
+                    normalize_event_number(
+                        record.get("DVEVENT")
+                    )
+                ),
+            }
+
+        cdc_damage_by_vehicle = defaultdict(
+            list
+        )
 
         for record in self._records(
             sheets,
@@ -2285,41 +2641,110 @@ class CaseAuditor:
                 record.get("VEHNO"),
             )
 
-            cdc_direction = (
-                self._direction(
-                    record.get("CDCPLANE"),
-                    record.get(
-                        "CDCPLANETEXT"
+            cdc_damage_by_vehicle[key].append(
+                {
+                    "source": "CDC.CDCPLANE",
+                    "value": self._direction(
+                        record.get("CDCPLANE"),
+                        record.get(
+                            "CDCPLANETEXT"
+                        ),
                     ),
-                )
+                    "event_number": (
+                        normalize_event_number(
+                            record.get("EVENTNO")
+                        )
+                    ),
+                }
             )
 
-            gv_direction = (
-                gv_directions.get(
+        for key, gv_damage in (
+            gv_damage_by_vehicle.items()
+        ):
+            gv_direction = gv_damage[
+                "direction"
+            ]
+
+            gv_event_number = gv_damage[
+                "event_number"
+            ]
+
+            if gv_direction == "unknown":
+                continue
+
+            cdc_observations = [
+                observation
+                for observation
+                in cdc_damage_by_vehicle.get(
                     key,
-                    "unknown",
+                    [],
                 )
+                if observation["value"]
+                != "unknown"
+            ]
+
+            if not cdc_observations:
+                continue
+
+            all_cdc_directions = {
+                observation["value"]
+                for observation
+                in cdc_observations
+            }
+
+            event_observations = []
+
+            if gv_event_number is not None:
+                event_observations = [
+                    observation
+                    for observation
+                    in cdc_observations
+                    if observation.get(
+                        "event_number"
+                    )
+                    == gv_event_number
+                ]
+
+            # If the GV-selected event exists in CDC, compare against
+            # that event. Otherwise, compare against the complete CDC
+            # direction set for the vehicle.
+            comparison_observations = (
+                event_observations
+                if event_observations
+                else cdc_observations
             )
 
-            if (
-                gv_direction != "unknown"
-                and cdc_direction
-                != "unknown"
-                and gv_direction
-                != cdc_direction
-            ):
-                contradictions.append(
+            comparison_directions = {
+                observation["value"]
+                for observation
+                in comparison_observations
+            }
+
+            # A matching direction means that the sources are
+            # compatible. Other CDC rows may describe secondary
+            # impacts and must not create contradictions.
+            if gv_direction in comparison_directions:
+                continue
+
+            # If event matching was unavailable but the GV direction
+            # occurs elsewhere in the vehicle's CDC history, the
+            # sources remain compatible with a multi-event crash.
+            if gv_direction in all_cdc_directions:
+                contextual_differences.append(
                     {
                         "variable": (
                             "damage_direction"
                         ),
                         "entity": {
                             "case_id": key[0],
-                            "vehicle_number": (
-                                key[1]
+                            "vehicle_number": key[1],
+                            "gv_event_number": (
+                                gv_event_number
                             ),
                         },
-                        "status": "conflicting",
+                        "status": (
+                            "consistent_in_other_event"
+                        ),
                         "observations": [
                             {
                                 "source": (
@@ -2328,32 +2753,113 @@ class CaseAuditor:
                                 "value": (
                                     gv_direction
                                 ),
-                            },
-                            {
-                                "source": (
-                                    "CDC.CDCPLANE"
-                                ),
-                                "value": (
-                                    cdc_direction
+                                "event_number": (
+                                    gv_event_number
                                 ),
                             },
+                            *cdc_observations,
                         ],
                         "resolution": (
-                            "unresolved"
+                            "multi_event_damage"
                         ),
                     }
                 )
+                continue
 
+            # Multiple CDC directions without an event-aligned match
+            # indicate an ambiguous multi-event difference. Preserve
+            # it for review, but do not classify it as a hard
+            # contradiction.
+            if (
+                not event_observations
+                and len(all_cdc_directions) > 1
+            ):
+                contextual_differences.append(
+                    {
+                        "variable": (
+                            "damage_direction"
+                        ),
+                        "entity": {
+                            "case_id": key[0],
+                            "vehicle_number": key[1],
+                            "gv_event_number": (
+                                gv_event_number
+                            ),
+                        },
+                        "status": (
+                            "multi_event_difference"
+                        ),
+                        "observations": [
+                            {
+                                "source": (
+                                    "GV.DAMPLANE"
+                                ),
+                                "value": (
+                                    gv_direction
+                                ),
+                                "event_number": (
+                                    gv_event_number
+                                ),
+                            },
+                            *cdc_observations,
+                        ],
+                        "resolution": (
+                            "manual_event_alignment_required"
+                        ),
+                    }
+                )
+                continue
+
+            # A hard contradiction is retained when the relevant CDC
+            # event, or the only available CDC direction, disagrees
+            # with the GV direction.
+            contradictions.append(
+                {
+                    "variable": (
+                        "damage_direction"
+                    ),
+                    "entity": {
+                        "case_id": key[0],
+                        "vehicle_number": key[1],
+                        "event_number": (
+                            gv_event_number
+                        ),
+                    },
+                    "status": "conflicting",
+                    "observations": [
+                        {
+                            "source": (
+                                "GV.DAMPLANE"
+                            ),
+                            "value": (
+                                gv_direction
+                            ),
+                            "event_number": (
+                                gv_event_number
+                            ),
+                        },
+                        *comparison_observations,
+                    ],
+                    "resolution": (
+                        "unresolved"
+                    ),
+                }
+            )
+
+        # ---------------------------------------------------------
         # Injury-label consistency
+        # ---------------------------------------------------------
+
         inconsistent_injuries = []
 
-        for occupant in injury_audit[
-            "occupants"
-        ]:
+        for occupant in injury_audit.get(
+            "occupants",
+            [],
+        ):
             if (
-                occupant["label_state"]
+                occupant.get("label_state")
                 == "positive"
-                and occupant["mais"] == 0
+                and occupant.get("mais") == 0
             ):
                 inconsistent_injuries.append(
                     occupant
@@ -2369,9 +2875,7 @@ class CaseAuditor:
                     "observations": (
                         inconsistent_injuries
                     ),
-                    "resolution": (
-                        "unresolved"
-                    ),
+                    "resolution": "unresolved",
                 }
             )
 
@@ -2380,10 +2884,16 @@ class CaseAuditor:
             "contradiction_count": len(
                 contradictions
             ),
-            "contradictions": (
-                contradictions
+            "contradictions": contradictions,
+            "contextual_difference_count": len(
+                contextual_differences
+            ),
+            "contextual_differences": (
+                contextual_differences
             ),
         }
+
+
 
     # ------------------------------------------------------------------
     # Important-variable profiles
@@ -4055,11 +4565,49 @@ class CaseAuditor:
         # ----------------------------------------------------------
 
         if not edr_audit.get(
-            "edr_obtained",
+            "collection_record_present",
             False,
         ):
             warnings.append(
-                "No EDR data were found."
+                "No EDR collection information "
+                "was found."
+            )
+
+        elif not edr_audit.get(
+            "edr_obtained",
+            False,
+        ):
+            determination = (
+                edr_audit.get(
+                    "edr_availability_determination"
+                )
+            )
+
+            if (
+                determination
+                == "reported_not_obtained"
+            ):
+                warnings.append(
+                    "The EDR collection record "
+                    "reports that EDR data were "
+                    "not obtained or are unavailable."
+                )
+
+            else:
+                warnings.append(
+                    "An EDR collection record "
+                    "exists, but it does not confirm "
+                    "that EDR data were obtained."
+                )
+
+        elif not edr_audit.get(
+            "event_records_available",
+            False,
+        ):
+            warnings.append(
+                "EDR acquisition is reported, but "
+                "no EDR event records are available "
+                "in the export."
             )
 
         elif not edr_audit.get(
@@ -4067,8 +4615,10 @@ class CaseAuditor:
             False,
         ):
             warnings.append(
-                "EDR collection information exists, "
-                "but no EDR event records are available."
+                "EDR event records are available, "
+                "but the event associated with the "
+                "investigated crash could not be "
+                "identified reliably."
             )
 
         else:
@@ -4077,10 +4627,10 @@ class CaseAuditor:
                 False,
             ):
                 warnings.append(
-                    "The applicable EDR event contains "
-                    "a Delta-V history, but its unit is "
-                    "not explicit in the exported signal "
-                    "description. Validate the unit before "
+                    "The applicable EDR event "
+                    "contains a Delta-V history, "
+                    "but its unit is not explicit. "
+                    "Validate the unit before "
                     "biomechanical calculations."
                 )
 
@@ -4104,12 +4654,11 @@ class CaseAuditor:
                 and not direct_acceleration_available
             ):
                 warnings.append(
-                    "A Delta-V time history is available, "
-                    "but direct acceleration is unavailable. "
-                    "Acceleration may be derived only after "
-                    "validating the time and Delta-V units "
-                    "and applying an appropriate numerical "
-                    "differentiation method."
+                    "A Delta-V time history is "
+                    "available, but direct acceleration "
+                    "is unavailable. Validate the units "
+                    "and time axis before numerical "
+                    "differentiation."
                 )
 
             elif not (
@@ -4121,6 +4670,9 @@ class CaseAuditor:
                     "contain a usable Delta-V or direct "
                     "acceleration history."
                 )
+
+
+
 
         agreement = edr_audit.get(
             "summary_history_agreement",
