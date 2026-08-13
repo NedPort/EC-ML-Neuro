@@ -29,7 +29,7 @@ def main():
         help="Root data directory",
     )
 
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(["7009"])    ## This case number is temporary
 
     auditor = CaseAuditor(
         data_root=arguments.data_root
