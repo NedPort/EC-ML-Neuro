@@ -1,37 +1,80 @@
-"""Create the Stage 3 standardized occupant--vehicle index."""
+"""Create Stage 3 standardized CISS indices."""
 
 from __future__ import annotations
 
 import argparse
 
-from src.standardization.occupant_vehicle_index import OccupantVehicleIndexBuilder
+from src.standardization.occupant_vehicle_index import (
+    OccupantVehicleIndexBuilder,
+)
+from src.standardization.vehicle_event_index import (
+    VehicleEventIndexBuilder,
+)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Build the CISS Stage 3 occupant--vehicle Parquet index."
+        description=(
+            "Build Stage 3 standardized CISS Parquet indices."
+        )
     )
+
     parser.add_argument(
         "case_ids",
         metavar="CASE_ID",
         nargs="*",
         type=int,
-        help="Optional CISS case IDs. Omit to standardize every audited case.",
+        help=(
+            "Optional CISS case IDs. Omit to standardize "
+            "every audited case."
+        ),
     )
-    parser.add_argument("--data-root", default="data", help="Project data directory.")
+
+    parser.add_argument(
+        "--data-root",
+        default="data",
+        help="Project data directory.",
+    )
+
     parser.add_argument(
         "--output-directory",
         default=None,
-        help="Defaults to data/processed/standardized.",
+        help=(
+            "Defaults to data/processed/standardized."
+        ),
     )
+
     arguments = parser.parse_args()
 
-    paths = OccupantVehicleIndexBuilder(arguments.data_root).build(
-        case_ids=arguments.case_ids or None,
+    case_ids = arguments.case_ids or None
+
+    occupant_paths = OccupantVehicleIndexBuilder(
+        arguments.data_root
+    ).build(
+        case_ids=case_ids,
         output_directory=arguments.output_directory,
     )
-    print(f"Stage 3 table created: {paths.parquet}")
-    print(f"Schema and provenance: {paths.metadata}")
+
+    vehicle_event_paths = VehicleEventIndexBuilder(
+        arguments.data_root
+    ).build(
+        case_ids=case_ids,
+        output_directory=arguments.output_directory,
+    )
+
+    print("Stage 3 standardization completed.")
+    print(
+        f"Occupant--vehicle index: "
+        f"{occupant_paths.parquet}"
+    )
+    print(
+        f"Vehicle--event index: "
+        f"{vehicle_event_paths.parquet}"
+    )
+    print(
+        f"Vehicle--event metadata: "
+        f"{vehicle_event_paths.metadata}"
+    )
 
 
 if __name__ == "__main__":
