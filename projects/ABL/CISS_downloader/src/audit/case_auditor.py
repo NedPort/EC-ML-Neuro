@@ -2354,7 +2354,328 @@ class CaseAuditor:
         }
 
 
+    # ------------------------------------------------------------------
+    # Collision context
+    # ------------------------------------------------------------------
 
+    @staticmethod
+    def _positive_int(value: Any) -> int | None:
+        """Return a positive integer when the value is usable."""
+        if value is None or isinstance(value, bool):
+            return None
+
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return None
+
+        return number if number > 0 else None
+
+    @staticmethod
+    def _text(value: Any) -> str | None:
+        """Return stripped text, or None for empty values."""
+        if value is None:
+            return None
+
+        text = str(value).strip()
+
+        return text or None
+
+    @classmethod
+    def _classify_collision_partner(
+        cls,
+        contact_text: Any,
+    ) -> tuple[str, int | None, str]:
+        """
+        Classify the contacted object only from documented CISS text.
+
+        Returns
+        -------
+        collision_partner_class:
+            vehicle, fixed_object, pedestrian_or_cyclist, animal,
+            non_motor_vehicle, unknown
+        partner_vehicle_number:
+            Vehicle number when the object text explicitly identifies it.
+        classification_status:
+            explicit_text, not_available, or unclassified_text.
+        """
+        text = cls._text(contact_text)
+
+        if text is None:
+            return "unknown", None, "not_available"
+
+        normalized = text.lower()
+
+        vehicle_match = re.search(
+            r"\bvehicle\s*#?\s*(\d+)\b",
+            normalized,
+        )
+
+        if vehicle_match:
+            return (
+                "vehicle",
+                int(vehicle_match.group(1)),
+                "explicit_text",
+            )
+
+        if any(
+            token in normalized
+            for token in (
+                "barrier",
+                "guardrail",
+                "pole",
+                "post",
+                "tree",
+                "wall",
+                "bridge",
+                "curb",
+                "ditch",
+                "embankment",
+                "utility",
+                "fence",
+            )
+        ):
+            return "fixed_object", None, "explicit_text"
+
+        if any(
+            token in normalized
+            for token in (
+                "pedestrian",
+                "bicycl",
+                "cyclist",
+                "scooter",
+            )
+        ):
+            return "pedestrian_or_cyclist", None, "explicit_text"
+
+        if any(
+            token in normalized
+            for token in (
+                "animal",
+                "deer",
+            )
+        ):
+            return "animal", None, "explicit_text"
+
+        if "not a motor vehicle" in normalized:
+            return "non_motor_vehicle", None, "explicit_text"
+
+        return "unknown", None, "unclassified_text"
+
+    def _audit_collision_context(
+        self,
+        sheets: dict[str, list[dict[str, Any]]],
+    ) -> dict[str, Any]:
+        """
+        Extract documented collision-contact context from CRASH, EVENT,
+        and CDC records. No collision class is guessed from vehicle count.
+        """
+        crash_records = self._records(sheets, "CRASH")
+        crash_record = crash_records[0] if crash_records else {}
+
+        case_vehicle_count = self._positive_int(
+            crash_record.get("VEHICLES")
+        )
+
+        crash_configuration_code = crash_record.get("CONFIG")
+        crash_configuration_text = self._text(
+            crash_record.get("CONFIGTEXT")
+        )
+
+        event_records: dict[int, dict[str, Any]] = {}
+
+        for record in self._records(sheets, "EVENT"):
+            event_number = self._positive_int(
+                record.get("EVENTNO")
+            )
+
+            if event_number is None:
+                continue
+
+            event_records[event_number] = {
+                "event_number": event_number,
+                "event_focal_vehicle_number": self._positive_int(
+                    record.get("VEHNUM")
+                ),
+                "event_contact_object_code": record.get("OBJCONT"),
+                "event_contact_object_text": self._text(
+                    record.get("OBJCONTTEXT")
+                ),
+                "event_focal_damage_area": self._text(
+                    record.get("GAD1TEXT")
+                ),
+                "event_partner_class_text": self._text(
+                    record.get("CLASS2TEXT")
+                ),
+                "event_partner_damage_area": self._text(
+                    record.get("GAD2TEXT")
+                ),
+            }
+
+        vehicle_events: dict[
+            tuple[int, int],
+            dict[str, Any],
+        ] = {}
+
+        # CDC is vehicle-event specific, so it is the preferred source
+        # when it provides an object-contact description.
+        for record in self._records(sheets, "CDC"):
+            vehicle_number = self._positive_int(
+                record.get("VEHNO")
+            )
+            event_number = self._positive_int(
+                record.get("EVENTNO")
+            )
+
+            if vehicle_number is None or event_number is None:
+                continue
+
+            event_context = event_records.get(
+                event_number,
+                {},
+            )
+
+            cdc_contact_text = self._text(
+                record.get("OBJCONTTEXT")
+            )
+            event_contact_text = event_context.get(
+                "event_contact_object_text"
+            )
+
+            selected_contact_text = (
+                cdc_contact_text
+                or event_contact_text
+            )
+
+            selected_source = (
+                "CDC"
+                if cdc_contact_text is not None
+                else (
+                    "EVENT"
+                    if event_contact_text is not None
+                    else None
+                )
+            )
+
+            (
+                partner_class,
+                partner_vehicle_number,
+                classification_status,
+            ) = self._classify_collision_partner(
+                selected_contact_text
+            )
+
+            vehicle_events[
+                (vehicle_number, event_number)
+            ] = {
+                "vehicle_number": vehicle_number,
+                "event_number": event_number,
+                "collision_partner_class": partner_class,
+                "collision_partner_vehicle_number": (
+                    partner_vehicle_number
+                ),
+                "collision_partner_raw_code": (
+                    record.get("OBJCONT")
+                    if record.get("OBJCONT") is not None
+                    else event_context.get(
+                        "event_contact_object_code"
+                    )
+                ),
+                "collision_partner_text": selected_contact_text,
+                "collision_context_source": selected_source,
+                "collision_context_status": (
+                    classification_status
+                ),
+                "event_focal_damage_area": event_context.get(
+                    "event_focal_damage_area"
+                ),
+                "event_partner_class_text": event_context.get(
+                    "event_partner_class_text"
+                ),
+                "event_partner_damage_area": event_context.get(
+                    "event_partner_damage_area"
+                ),
+            }
+
+        # If CDC has no row, preserve the EVENT-level observation for
+        # its documented focal vehicle.
+        for event_number, event_context in event_records.items():
+            vehicle_number = event_context.get(
+                "event_focal_vehicle_number"
+            )
+
+            if vehicle_number is None:
+                continue
+
+            key = (vehicle_number, event_number)
+
+            if key in vehicle_events:
+                continue
+
+            (
+                partner_class,
+                partner_vehicle_number,
+                classification_status,
+            ) = self._classify_collision_partner(
+                event_context.get(
+                    "event_contact_object_text"
+                )
+            )
+
+            vehicle_events[key] = {
+                "vehicle_number": vehicle_number,
+                "event_number": event_number,
+                "collision_partner_class": partner_class,
+                "collision_partner_vehicle_number": (
+                    partner_vehicle_number
+                ),
+                "collision_partner_raw_code": event_context.get(
+                    "event_contact_object_code"
+                ),
+                "collision_partner_text": event_context.get(
+                    "event_contact_object_text"
+                ),
+                "collision_context_source": "EVENT",
+                "collision_context_status": (
+                    classification_status
+                ),
+                "event_focal_damage_area": event_context.get(
+                    "event_focal_damage_area"
+                ),
+                "event_partner_class_text": event_context.get(
+                    "event_partner_class_text"
+                ),
+                "event_partner_damage_area": event_context.get(
+                    "event_partner_damage_area"
+                ),
+            }
+
+        partner_class_counts = Counter(
+            item["collision_partner_class"]
+            for item in vehicle_events.values()
+        )
+
+        return {
+            "case_vehicle_count": case_vehicle_count,
+            "crash_configuration_code": crash_configuration_code,
+            "crash_configuration_text": crash_configuration_text,
+            "vehicle_event_count": len(vehicle_events),
+            "partner_class_counts": dict(
+                sorted(partner_class_counts.items())
+            ),
+            "vehicle_events": sorted(
+                vehicle_events.values(),
+                key=lambda item: (
+                    item["vehicle_number"],
+                    item["event_number"],
+                ),
+            ),
+            "notes": (
+                "Collision-partner classes are extracted only from "
+                "CISS EVENT/CDC object-contact text. Vehicle count "
+                "alone is not used to infer a collision partner."
+            ),
+        }
 
 
 
@@ -4377,6 +4698,14 @@ class CaseAuditor:
             )
         )
 
+        collision_context = (
+            self._audit_collision_context(
+                sheets
+            )
+        )
+
+
+
         contradiction_audit = (
             self._audit_contradictions(
                 sheets,
@@ -4851,6 +5180,10 @@ class CaseAuditor:
             "edr_quality_audit": (
                 edr_audit
             ),
+
+            "collision_context": (
+                collision_context
+            ),            
             "crash_mechanics_sources": (
                 mechanics_audit
             ),

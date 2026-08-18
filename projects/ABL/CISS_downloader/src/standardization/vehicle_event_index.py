@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 
 
 @dataclass(frozen=True)
@@ -127,10 +127,15 @@ class VehicleEventIndexBuilder:
             .get("applicable_event_observations", [])
         )
 
+
         pdof_labels = self._pdof_labels_by_vehicle(
             audit.get("research_labels", {})
         )
-
+        collision_context_by_vehicle_event = (
+            self._collision_context_by_vehicle_event(
+                audit.get("collision_context", {})
+            )
+        )
         rows: list[dict[str, Any]] = []
 
         # Primary records: reconstructed vehicle-event entities.
@@ -155,6 +160,11 @@ class VehicleEventIndexBuilder:
                     delta_v_internally_consistent=entity.get(
                         "internally_consistent"
                     ),
+                    collision_context=(
+                        collision_context_by_vehicle_event.get(
+                            (vehicle_number, event_number)
+                        )
+                    ),                    
                     pdof_label=pdof_labels.get(
                         (vehicle_number, event_number)
                     ),
@@ -213,6 +223,11 @@ class VehicleEventIndexBuilder:
                     delta_v_source="EDREVENT",
                     delta_v_internally_consistent=None,
                     pdof_label=pdof_label,
+                    collision_context=(
+                        collision_context_by_vehicle_event.get(
+                            (vehicle_number, event_number)
+                        )
+                    ),                    
                     applicable_edr_event=edr,
                 )
             )
@@ -232,6 +247,7 @@ class VehicleEventIndexBuilder:
         delta_v_internally_consistent: bool | None,
         pdof_label: dict[str, Any] | None,
         applicable_edr_event: dict[str, Any] | None,
+        collision_context: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """Build one fully provenance-preserving vehicle-event record."""
         vehicle_id = f"{case_id}-V{vehicle_number}"
@@ -315,7 +331,96 @@ class VehicleEventIndexBuilder:
             "pdof_source_variable": pdof_source_variable,
             "pdof_training_usable": pdof_training_usable,
             "pdof_exclusion_reason": pdof_exclusion_reason,
-
+            # Collision configuration and partner evidence.
+            "case_vehicle_count": (
+                audit.get(
+                    "collision_context",
+                    {},
+                ).get("case_vehicle_count")
+            ),
+            "case_crash_event_count": audit.get(
+                "entities",
+                {},
+            ).get("crash_events"),
+            "crash_configuration_code": (
+                audit.get(
+                    "collision_context",
+                    {},
+                ).get("crash_configuration_code")
+            ),
+            "crash_configuration_text": (
+                audit.get(
+                    "collision_context",
+                    {},
+                ).get("crash_configuration_text")
+            ),
+            "collision_partner_class": (
+                collision_context.get(
+                    "collision_partner_class"
+                )
+                if collision_context
+                else "unknown"
+            ),
+            "collision_partner_vehicle_number": (
+                collision_context.get(
+                    "collision_partner_vehicle_number"
+                )
+                if collision_context
+                else None
+            ),
+            "collision_partner_raw_code": (
+                collision_context.get(
+                    "collision_partner_raw_code"
+                )
+                if collision_context
+                else None
+            ),
+            "collision_partner_text": (
+                collision_context.get(
+                    "collision_partner_text"
+                )
+                if collision_context
+                else None
+            ),
+            "collision_context_source": (
+                collision_context.get(
+                    "collision_context_source"
+                )
+                if collision_context
+                else None
+            ),
+            "collision_context_status": (
+                collision_context.get(
+                    "collision_context_status"
+                )
+                if collision_context
+                else "not_audited"
+            ),
+            "event_focal_damage_area": (
+                collision_context.get(
+                    "event_focal_damage_area"
+                )
+                if collision_context
+                else None
+            ),
+            "event_partner_class_text": (
+                collision_context.get(
+                    "event_partner_class_text"
+                )
+                if collision_context
+                else None
+            ),
+            "event_partner_damage_area": (
+                collision_context.get(
+                    "event_partner_damage_area"
+                )
+                if collision_context
+                else None
+            ),
+            "analysis_cohort": self._analysis_cohort(
+                collision_context
+            ),
+            
             # EDR and crash-pulse availability
             "edr_available": applicable_edr_event is not None,
             "edr_event_number": (
@@ -362,6 +467,66 @@ class VehicleEventIndexBuilder:
             "vlm_scene_geometry": None,
             "vlm_semantic_version": None,
         }
+
+
+
+    @staticmethod
+    def _collision_context_by_vehicle_event(
+        collision_context: dict[str, Any],
+    ) -> dict[tuple[int, int], dict[str, Any]]:
+        """Index audited collision context by vehicle and event."""
+        indexed: dict[
+            tuple[int, int],
+            dict[str, Any],
+        ] = {}
+
+        for item in collision_context.get(
+            "vehicle_events",
+            [],
+        ):
+            vehicle_number = item.get("vehicle_number")
+            event_number = item.get("event_number")
+
+            if vehicle_number is None or event_number is None:
+                continue
+
+            indexed[
+                (int(vehicle_number), int(event_number))
+            ] = item
+
+        return indexed
+
+    @staticmethod
+    def _analysis_cohort(
+        collision_context: dict[str, Any] | None,
+    ) -> str:
+        """
+        Assign a descriptive cohort without excluding any record.
+
+        This is not an ML eligibility decision yet.
+        """
+        if collision_context is None:
+            return "collision_context_not_available"
+
+        partner_class = collision_context.get(
+            "collision_partner_class"
+        )
+
+        cohorts = {
+            "vehicle": "vehicle_to_vehicle",
+            "fixed_object": "vehicle_to_fixed_object",
+            "pedestrian_or_cyclist": (
+                "vehicle_to_pedestrian_or_cyclist"
+            ),
+            "animal": "vehicle_to_animal",
+            "non_motor_vehicle": "vehicle_to_non_motor_vehicle",
+        }
+
+        return cohorts.get(
+            partner_class,
+            "collision_partner_unknown",
+        )
+
 
     @staticmethod
     def _pdof_labels_by_vehicle(
