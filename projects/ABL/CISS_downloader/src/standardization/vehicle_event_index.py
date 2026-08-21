@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.2"
 
 
 @dataclass(frozen=True)
@@ -109,7 +109,7 @@ class VehicleEventIndexBuilder:
         self,
         audit_path: Path,
     ) -> list[dict[str, Any]]:
-        """Create vehicle--event rows from one audit file."""
+        """Create canonical vehicle--event rows from one audit file."""
         with audit_path.open("r", encoding="utf-8") as file:
             audit = json.load(file)
 
@@ -127,90 +127,84 @@ class VehicleEventIndexBuilder:
             .get("applicable_event_observations", [])
         )
 
-
         pdof_labels = self._pdof_labels_by_vehicle(
             audit.get("research_labels", {})
         )
+
         collision_context_by_vehicle_event = (
             self._collision_context_by_vehicle_event(
                 audit.get("collision_context", {})
             )
         )
-        rows: list[dict[str, Any]] = []
 
-        # Primary records: reconstructed vehicle-event entities.
-        for entity in reconstruction_entities:
-            vehicle_number = entity.get("vehicle_number")
-            event_number = entity.get("event_number")
-
-            if vehicle_number is None or event_number is None:
-                continue
-
-            selected = entity.get("selected_observation", {})
-
-            rows.append(
-                self._build_row(
-                    audit=audit,
-                    audit_path=audit_path,
-                    case_id=case_id,
-                    vehicle_number=vehicle_number,
-                    event_number=event_number,
-                    delta_v_observation=selected,
-                    delta_v_source=selected.get("source"),
-                    delta_v_internally_consistent=entity.get(
-                        "internally_consistent"
-                    ),
-                    collision_context=(
-                        collision_context_by_vehicle_event.get(
-                            (vehicle_number, event_number)
-                        )
-                    ),                    
-                    pdof_label=pdof_labels.get(
-                        (vehicle_number, event_number)
-                    ),
-                    applicable_edr_event=self._find_edr_event(
-                        edr_observations,
-                        vehicle_number,
-                        event_number,
-                    ),
-                )
-            )
-
-        # EDR-only cases, such as 7009, may not have reconstruction entities.
-        existing_ids = {
-            row["vehicle_event_id"]
-            for row in rows
+        reconstruction_by_vehicle_event = {
+            (
+                int(entity["vehicle_number"]),
+                int(entity["event_number"]),
+            ): entity
+            for entity in reconstruction_entities
+            if entity.get("vehicle_number") is not None
+            and entity.get("event_number") is not None
         }
 
+        # Collision context is the canonical base.
+        # This retains events even when Delta-V and EDR are unavailable.
+        event_keys = set(collision_context_by_vehicle_event)
+        event_keys.update(reconstruction_by_vehicle_event)
+
+        # Retain an applicable EDR-only event if it has no collision-context row.
         for edr in edr_observations:
             vehicle_number = edr.get("vehicle_number")
+            event_number = edr.get("edr_event_number")
 
-            if vehicle_number is None:
-                continue
-
-            # CISS EDR event numbering is treated as the crash event number
-            # for this canonical index.
-            event_number = edr.get("edr_event_number", 1)
-
-            vehicle_event_id = (
-                f"{case_id}-V{vehicle_number}-E{event_number}"
-            )
-
-            if vehicle_event_id in existing_ids:
-                continue
-
-            pdof_label = pdof_labels.get(
-                (vehicle_number, event_number)
-            )
-
-            # Some CISS PDOF records use CDC EVENT1 while the EDR record
-            # is EDREVENT1. If exact matching fails, accept a sole PDOF
-            # label for that vehicle only.
-            if pdof_label is None:
-                pdof_label = self._sole_pdof_label_for_vehicle(
-                    pdof_labels,
-                    vehicle_number,
+            if vehicle_number is not None and event_number is not None:
+                event_keys.add(
+                    (
+                        int(vehicle_number),
+                        int(event_number),
+                    )
                 )
+
+        rows: list[dict[str, Any]] = []
+
+        for vehicle_number, event_number in sorted(event_keys):
+            reconstruction = reconstruction_by_vehicle_event.get(
+                (
+                    vehicle_number,
+                    event_number,
+                )
+            )
+
+            selected_observation = (
+                reconstruction.get("selected_observation", {})
+                if reconstruction
+                else {}
+            )
+
+            applicable_edr_event = self._find_edr_event(
+                edr_observations,
+                vehicle_number,
+                event_number,
+            )
+
+            # Prefer a reconstruction observation when it exists.
+            # Otherwise keep EDR evidence, or an empty record.
+            # Never create or infer a Delta-V value.
+            delta_v_observation = (
+                selected_observation
+                or applicable_edr_event
+                or {}
+            )
+
+            delta_v_source = (
+                selected_observation.get("source")
+                if selected_observation
+                else (
+                    "EDREVENT"
+                    if applicable_edr_event
+                    else None
+                )
+            )
 
             rows.append(
                 self._build_row(
@@ -219,16 +213,28 @@ class VehicleEventIndexBuilder:
                     case_id=case_id,
                     vehicle_number=vehicle_number,
                     event_number=event_number,
-                    delta_v_observation=edr,
-                    delta_v_source="EDREVENT",
-                    delta_v_internally_consistent=None,
-                    pdof_label=pdof_label,
+                    delta_v_observation=delta_v_observation,
+                    delta_v_source=delta_v_source,
+                    delta_v_internally_consistent=(
+                        reconstruction.get("internally_consistent")
+                        if reconstruction
+                        else None
+                    ),
                     collision_context=(
                         collision_context_by_vehicle_event.get(
-                            (vehicle_number, event_number)
+                            (
+                                vehicle_number,
+                                event_number,
+                            )
                         )
-                    ),                    
-                    applicable_edr_event=edr,
+                    ),
+                    pdof_label=pdof_labels.get(
+                        (
+                            vehicle_number,
+                            event_number,
+                        )
+                    ),
+                    applicable_edr_event=applicable_edr_event,
                 )
             )
 
@@ -271,7 +277,34 @@ class VehicleEventIndexBuilder:
         lateral_delta_v = delta_v_observation.get(
             "lateral_delta_v"
         )
+        delta_v_scope = self._delta_v_scope(
+            delta_v_source
+        )
 
+        warning_count = len(
+            audit.get(
+                "audit_summary",
+                {},
+            ).get(
+                "warnings",
+                [],
+            )
+        )
+
+        contradiction_count = audit.get(
+            "cross_source_contradictions",
+            {},
+        ).get(
+            "contradiction_count",
+            0,
+        )
+
+        case_event_count = audit.get(
+            "entities",
+            {},
+        ).get(
+            "crash_events",
+        )
         pdof_value = None
         pdof_unit = None
         pdof_source_variable = None
@@ -319,10 +352,15 @@ class VehicleEventIndexBuilder:
                 longitudinal_delta_v,
                 lateral_delta_v,
             ),
+
             "delta_v_exclusion_reason": self._delta_v_exclusion_reason(
                 total_delta_v,
                 longitudinal_delta_v,
                 lateral_delta_v,
+            ),
+            "delta_v_scope": delta_v_scope,
+            "delta_v_event_linked": (
+                delta_v_scope == "event_specific"
             ),
 
             # PDOF target record
@@ -331,6 +369,7 @@ class VehicleEventIndexBuilder:
             "pdof_source_variable": pdof_source_variable,
             "pdof_training_usable": pdof_training_usable,
             "pdof_exclusion_reason": pdof_exclusion_reason,
+            "pdof_event_linked": pdof_label is not None,
             # Collision configuration and partner evidence.
             "case_vehicle_count": (
                 audit.get(
@@ -338,10 +377,28 @@ class VehicleEventIndexBuilder:
                     {},
                 ).get("case_vehicle_count")
             ),
-            "case_crash_event_count": audit.get(
-                "entities",
-                {},
-            ).get("crash_events"),
+            "case_crash_event_count": case_event_count,
+            "is_multi_vehicle_case": (
+                (
+                    audit.get(
+                        "collision_context",
+                        {},
+                    ).get(
+                        "case_vehicle_count",
+                    )
+                    or 0
+                )
+                > 1
+            ),
+            "is_multi_event_case": bool(
+                case_event_count
+                and case_event_count > 1
+            ),
+            "event_sequence_position": event_number,
+            "prior_event_count": max(
+                event_number - 1,
+                0,
+            ),
             "crash_configuration_code": (
                 audit.get(
                     "collision_context",
@@ -466,6 +523,10 @@ class VehicleEventIndexBuilder:
             "vlm_collision_partner_evidence": None,
             "vlm_scene_geometry": None,
             "vlm_semantic_version": None,
+            "audit_warning_count": warning_count,
+            "cross_source_contradiction_count": (
+                contradiction_count
+            ),
         }
 
 
@@ -676,7 +737,24 @@ class VehicleEventIndexBuilder:
         }
 
         return priorities.get(source)
+    @staticmethod
+    def _delta_v_scope(
+        source: str | None,
+    ) -> str:
+        """
+        State whether the selected Delta-V source
+        is specifically linked to one collision event.
+        """
+        if source in {
+            "CDC",
+            "EDREVENT",
+        }:
+            return "event_specific"
 
+        if source == "GV":
+            return "vehicle_total"
+
+        return "unavailable_or_unresolved"
     @staticmethod
     def _delta_v_is_usable(
         total_delta_v: Any,
@@ -766,7 +844,150 @@ class VehicleEventIndexBuilder:
             index=False,
             engine="pyarrow",
         )
+    @staticmethod
+    def _canonical_coverage(
+        rows: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """
+        Summarize canonical event coverage and initial
+        leakage-safe baseline-model eligibility.
+        """
+        partner_classes = [
+            row.get(
+                "collision_partner_class",
+                "unknown",
+            )
+            or "unknown"
+            for row in rows
+        ]
 
+        unique_case_ids = sorted(
+            {
+                row["case_id"]
+                for row in rows
+            }
+        )
+
+        multi_vehicle_case_ids = sorted(
+            {
+                row["case_id"]
+                for row in rows
+                if row.get("is_multi_vehicle_case")
+            }
+        )
+
+        multi_event_case_ids = sorted(
+            {
+                row["case_id"]
+                for row in rows
+                if row.get("is_multi_event_case")
+            }
+        )
+
+        vehicle_to_vehicle_rows = [
+            row
+            for row in rows
+            if row.get("collision_partner_class")
+            == "vehicle"
+        ]
+
+        fixed_object_rows = [
+            row
+            for row in rows
+            if row.get("collision_partner_class")
+            == "fixed_object"
+        ]
+
+        unknown_partner_rows = [
+            row
+            for row in rows
+            if row.get("collision_partner_class")
+            in {
+                None,
+                "unknown",
+            }
+        ]
+
+        event_linked_delta_v_rows = [
+            row
+            for row in rows
+            if row.get("delta_v_training_usable")
+            and row.get("delta_v_event_linked")
+        ]
+
+        event_linked_pdof_rows = [
+            row
+            for row in rows
+            if row.get("pdof_training_usable")
+            and row.get("pdof_event_linked")
+        ]
+
+        rows_with_both_targets = [
+            row
+            for row in rows
+            if row.get("delta_v_training_usable")
+            and row.get("delta_v_event_linked")
+            and row.get("pdof_training_usable")
+            and row.get("pdof_event_linked")
+        ]
+
+        initial_baseline_rows = [
+            row
+            for row in rows
+            if row.get("collision_partner_class")
+            == "vehicle"
+            and not row.get("is_multi_event_case")
+            and row.get("delta_v_training_usable")
+            and row.get("delta_v_event_linked")
+            and row.get("pdof_training_usable")
+            and row.get("pdof_event_linked")
+            and row.get(
+                "cross_source_contradiction_count",
+                0,
+            ) == 0
+        ]
+
+        return {
+            "canonical_case_count": len(
+                unique_case_ids
+            ),
+            "canonical_vehicle_event_count": len(
+                rows
+            ),
+            "cases_with_more_than_one_vehicle": len(
+                multi_vehicle_case_ids
+            ),
+            "multi_vehicle_case_ids": multi_vehicle_case_ids,
+            "cases_with_multiple_events": len(
+                multi_event_case_ids
+            ),
+            "multi_event_case_ids": multi_event_case_ids,
+            "collision_partner_event_counts": {
+                "vehicle": len(vehicle_to_vehicle_rows),
+                "fixed_object": len(fixed_object_rows),
+                "unknown": len(unknown_partner_rows),
+            },
+            "event_linked_target_availability": {
+                "delta_v": len(
+                    event_linked_delta_v_rows
+                ),
+                "pdof": len(
+                    event_linked_pdof_rows
+                ),
+                "delta_v_and_pdof": len(
+                    rows_with_both_targets
+                ),
+            },
+            "initial_baseline_candidate_count": len(
+                initial_baseline_rows
+            ),
+            "initial_baseline_definition": (
+                "vehicle-to-vehicle, not a multi-event "
+                "case, event-linked usable Delta-V, "
+                "event-linked usable PDOF, and no "
+                "cross-source contradiction"
+            ),
+        }
     @staticmethod
     def _write_metadata(
         rows: list[dict[str, Any]],
@@ -793,6 +1014,11 @@ class VehicleEventIndexBuilder:
                 str(audit_path)
                 for audit_path in audit_paths
             ],
+            "canonical_coverage": (
+                VehicleEventIndexBuilder._canonical_coverage(
+                    rows
+                )
+            ),
             "target_availability": {
                 "rows_with_any_delta_v": sum(
                     bool(row["delta_v_training_usable"])
