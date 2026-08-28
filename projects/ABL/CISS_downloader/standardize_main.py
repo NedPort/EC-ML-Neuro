@@ -7,7 +7,7 @@ import argparse
 from src.standardization.occupant_vehicle_index import (
     OccupantVehicleIndexBuilder,
 )
-from src.standardization.vehicle_event_index import (
+from CISS_downloader.src.linked_tables.vehicle_event_index import (
     VehicleEventIndexBuilder,
 )
 
