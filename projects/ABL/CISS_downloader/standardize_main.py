@@ -1,4 +1,6 @@
-"""Create Stage 3 standardized CISS indices."""
+"""
+Create Stage 3 standardized CISS indices.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +9,7 @@ import argparse
 from src.standardization.occupant_vehicle_index import (
     OccupantVehicleIndexBuilder,
 )
-from CISS_downloader.src.linked_tables.vehicle_event_index import (
+from src.standardization.vehicle_event_index import (
     VehicleEventIndexBuilder,
 )
 
@@ -64,15 +66,15 @@ def main() -> None:
 
     print("Stage 3 standardization completed.")
     print(
-        f"Occupant--vehicle index: "
+        f"Occupant-vehicle index: "
         f"{occupant_paths.parquet}"
     )
     print(
-        f"Vehicle--event index: "
+        f"Vehicle-event index: "
         f"{vehicle_event_paths.parquet}"
     )
     print(
-        f"Vehicle--event metadata: "
+        f"Vehicle-event metadata: "
         f"{vehicle_event_paths.metadata}"
     )
 
