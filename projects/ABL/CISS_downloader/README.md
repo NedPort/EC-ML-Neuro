@@ -242,3 +242,59 @@ uv run python build_model1_target_cohorts.py
 # 10. Refresh the feature-quality diagnostic
 uv run python build_model1_feature_quality_audit.py
 
+
+
+
+#######   EDR-Related Processing
+
+# 0. One-time dependency installation
+uv add pywinauto pywin32
+
+# 1. Find every .cdrx file under downloaded case folders
+uv run python build_cdrx_inventory.py
+
+# 2. Build a queue of CDRX files still needing PDF and/or CSV export
+uv run python edr_cdr/build_cdrx_conversion_queue.py
+
+# 3. Test the Bosch automation on a very small batch first
+uv run python batch_cdr_exports.py --limit 3
+
+# 4. Review the results
+Get-Content data\processed\edr\cdr_export_attempts.csv
+Get-Content data\processed\edr\cdrx_conversion_queue.csv
+
+# 5. Continue with a larger batch after the test is successful
+uv run python batch_cdr_exports.py --limit 10
+
+# 6. Repeat until the queue is finished
+uv run python edr_cdr/build_cdrx_conversion_queue.py
+uv run python batch_cdr_exports.py --limit 10
+
+
+#####
+
+# See the files that actually exist in the EDR output folder
+Get-ChildItem data\processed\edr
+
+# Review every Bosch export attempt and its status
+Get-Content data\processed\edr\cdr_export_attempts.csv
+
+# More readable table: case, vehicle, PDF status, CSV status, error
+Import-Csv data\processed\edr\cdr_export_attempts.csv |
+Select-Object case_id, vehicle_number, pdf_export_status, csv_export_status, error_message |
+Format-Table -AutoSize
+
+
+
+#### final evaluation
+
+
+Import-Csv data\processed\edr\cdr_export_attempts.csv |
+Group-Object cdrx_source_path |
+ForEach-Object {
+    $_.Group |
+    Sort-Object attempted_at_utc |
+    Select-Object -Last 1
+} |
+Select-Object case_id, vehicle_number, pdf_export_status, csv_export_status, error_message |
+Format-Table -AutoSize

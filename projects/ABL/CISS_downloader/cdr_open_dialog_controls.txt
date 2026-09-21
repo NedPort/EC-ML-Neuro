@@ -1,0 +1,184 @@
+Control Identifiers:
+
+Dialog - 'OPEN CDR FILE'    (L0, T0, R960, B540)
+['Dialog', 'OPEN CDR FILE', 'OPEN CDR FILEDialog']
+child_window(title="OPEN CDR FILE", control_type="Window")
+   | 
+   | Pane - ''    (L8, T86, R952, B451)
+   | ['Pane', 'No items match your search.Pane', 'Pane0', 'Pane1']
+   |    | 
+   |    | Toolbar - 'Command Module'    (L8, T86, R952, B117)
+   |    | ['Toolbar', 'Command ModuleToolbar', 'Command Module', 'Toolbar0', 'Toolbar1']
+   |    | child_window(title="Command Module", auto_id="FolderBandModuleInner", control_type="ToolBar")
+   |    |    | 
+   |    |    | Button - '&Help'    (L915, T88, R943, B114)
+   |    |    | ['&HelpButton', '&Help', 'Button', 'Button0', 'Button1']
+   |    |    | child_window(title="&Help", auto_id="HelpButton", control_type="Button")
+   |    |    | 
+   |    |    | CheckBox - 'Preview pane'    (L879, T88, R907, B114)
+   |    |    | ['CheckBox', 'Preview paneCheckBox', 'Preview pane']
+   |    |    | child_window(title="Preview pane", auto_id="PreviewButton", control_type="CheckBox")
+   |    |    | 
+   |    |    | SplitButton - 'Details'    (L824, T88, R879, B114)
+   |    |    | ['DetailsSplitButton', 'Details', 'SplitButton', 'SplitButton0', 'SplitButton1']
+   |    |    | child_window(title="Details", auto_id="ViewControl", control_type="SplitButton")
+   |    |    |    | 
+   |    |    |    | Button - 'View Slider'    (L851, T88, R869, B114)
+   |    |    |    | ['View Slider', 'View SliderButton', 'Button2']
+   |    |    |    | child_window(title="View Slider", auto_id="SplitMenuButton", control_type="Button")
+   |    |    | 
+   |    |    | Button - 'Organize'    (L11, T88, R102, B114)
+   |    |    | ['Organize', 'Button3', 'OrganizeButton']
+   |    |    | child_window(title="Organize", auto_id="{7DDC1264-7E4D-4F74-BBC0-D191987C8D0F}", control_type="Button")
+   |    |    | 
+   |    |    | Button - 'New folder'    (L102, T88, R190, B114)
+   |    |    | ['New folder', 'New folderButton', 'Button4']
+   |    |    | child_window(title="New folder", auto_id="{E44616AD-6DF1-4B94-85A4-E465AE8A19DB}", control_type="Button")
+   |    | 
+   |    | Pane - 'Control Host'    (L10, T117, R205, B451)
+   |    | ['Control Host', 'Pane2', 'Control HostPane']
+   |    | child_window(title="Control Host", auto_id="ProperTreeHost", control_type="Pane")
+   |    |    | 
+   |    |    | TreeView - 'Navigation Pane'    (L10, T117, R205, B451)
+   |    |    | ['TreeView', 'Navigation PaneTreeView', 'Navigation Pane', 'TreeView0', 'TreeView1']
+   |    |    | child_window(title="Navigation Pane", auto_id="100", control_type="Tree")
+   |    |    |    | 
+   |    |    |    | ScrollBar - 'Vertical'    (L188, T117, R205, B451)
+   |    |    |    | ['VerticalScrollBar', 'Vertical', 'ScrollBar']
+   |    |    |    | child_window(title="Vertical", auto_id="NonClientVerticalScrollBar", control_type="ScrollBar")
+   |    |    |    | 
+   |    |    |    | TreeItem - 'Desktop'    (L0, T0, R0, B0)
+   |    |    |    | ['TreeItem', 'Desktop', 'DesktopTreeItem', 'TreeItem0', 'TreeItem1']
+   |    |    |    | child_window(title="Desktop", control_type="TreeItem")
+   |    | 
+   |    | Pane - 'Shell Folder View'    (L209, T117, R952, B451)
+   |    | ['Pane3', 'Shell Folder View', 'Shell Folder ViewPane']
+   |    | child_window(title="Shell Folder View", auto_id="listview", control_type="Pane")
+   |    |    | 
+   |    |    | ListBox - 'Items View'    (L209, T117, R952, B451)
+   |    |    | ['ListBox', 'Items ViewListBox', 'Items View']
+   |    |    | child_window(title="Items View", control_type="List")
+   |    |    |    | 
+   |    |    |    | Header - 'Header'    (L209, T117, R952, B142)
+   |    |    |    | ['Header', 'HeaderHeader']
+   |    |    |    | child_window(title="Header", control_type="Header")
+   |    |    |    | 
+   |    |    |    | Static - 'No items match your search.'    (L209, T148, R952, B181)
+   |    |    |    | ['Static', 'No items match your search.', 'No items match your search.Static', 'Static0', 'Static1']
+   |    |    |    | child_window(title="No items match your search.", auto_id="EmptyTextFocusable", control_type="Text")
+   |    | 
+   |    | TreeView - 'Application Controls'    (L0, T0, R0, B0)
+   |    | ['TreeView2', 'Application ControlsTreeView', 'Application Controls']
+   |    | child_window(title="Application Controls", auto_id="AppControlsModuleInner", control_type="Tree")
+   | 
+   | Static - 'File name:'    (L138, T464, R192, B479)
+   | ['Static2', 'File name:Static', 'File name:', 'File name:0', 'File name:1']
+   | child_window(title="File name:", auto_id="1090", control_type="Text")
+   | 
+   | ComboBox - 'File name:'    (L197, T460, R735, B484)
+   | ['File name:ComboBox', 'ComboBox', 'File name:2', 'ComboBox0', 'ComboBox1']
+   | child_window(title="File name:", auto_id="1148", control_type="ComboBox")
+   |    | 
+   |    | Edit - 'File name:'    (L201, T465, R715, B480)
+   |    | ['File name:Edit', 'Edit', 'Edit0', 'Edit1']
+   |    | child_window(title="File name:", auto_id="1148", control_type="Edit")
+   |    | 
+   |    | Button - 'Open'    (L719, T461, R734, B483)
+   |    | ['Open', 'OpenButton', 'Button13', 'Open0', 'Open1', 'OpenButton0', 'OpenButton1']
+   |    | child_window(title="Open", auto_id="DropDown", control_type="Button")
+   | 
+   | ComboBox - 'Files of type:'    (L747, T460, R935, B483)
+   | ['Files of type:', 'ComboBox2', 'Files of type:ComboBox', 'Files of type:0', 'Files of type:1']
+   | child_window(title="Files of type:", auto_id="1136", control_type="ComboBox")
+   |    | 
+   |    | Static - 'Files of type:'    (L3, T3, R168, B20)
+   |    | ['Files of type:2', 'Files of type:Static', 'Static3']
+   |    | child_window(title="Files of type:", control_type="Text")
+   |    | 
+   |    | Button - 'Open'    (L919, T461, R934, B482)
+   |    | ['Open2', 'OpenButton2', 'Button14']
+   |    | child_window(title="Open", auto_id="DropDown", control_type="Button")
+   | 
+   | Button - 'Open'    (L747, T489, R835, B515)
+   | ['Open3', 'OpenButton3', 'Button15']
+   | child_window(title="Open", auto_id="1", control_type="Button")
+   | 
+   | Button - 'Cancel'    (L847, T489, R935, B515)
+   | ['CancelButton', 'Cancel', 'Button16']
+   | child_window(title="Cancel", auto_id="2", control_type="Button")
+   | 
+   | Thumb - ''    (L935, T515, R952, B532)
+   | ['Thumb2', 'No items match your search.Thumb']
+   | 
+   | Pane - ''    (L8, T31, R952, B86)
+   | ['Pane4']
+   | child_window(auto_id="40965", control_type="Pane")
+   |    | 
+   |    | Pane - ''    (L8, T40, R108, B74)
+   |    | ['Pane5']
+   |    |    | 
+   |    |    | Toolbar - 'Navigation buttons'    (L12, T42, R108, B74)
+   |    |    | ['Toolbar2', 'Navigation buttonsToolbar', 'Navigation buttons']
+   |    |    | child_window(title="Navigation buttons", control_type="ToolBar")
+   |    |    |    | 
+   |    |    |    | Button - 'Back (Alt + Left Arrow)'    (L12, T42, R47, B74)
+   |    |    |    | ['Back (Alt + Left Arrow)', 'Back (Alt + Left Arrow)Button', 'Button17']
+   |    |    |    | child_window(title="Back (Alt + Left Arrow)", control_type="Button")
+   |    |    |    | 
+   |    |    |    | Button - 'Forward (Alt + Right Arrow)'    (L47, T42, R82, B74)
+   |    |    |    | ['Button18', 'Forward (Alt + Right Arrow)', 'Forward (Alt + Right Arrow)Button']
+   |    |    |    | child_window(title="Forward (Alt + Right Arrow)", control_type="Button")
+   |    |    |    | 
+   |    |    |    | Button - 'Recent locations'    (L82, T42, R102, B74)
+   |    |    |    | ['Recent locationsButton', 'Recent locations', 'Button19']
+   |    |    |    | child_window(title="Recent locations", control_type="Button")
+   |    | 
+   |    | Pane - ''    (L108, T39, R144, B75)
+   |    | ['Pane6']
+   |    |    | 
+   |    |    | Toolbar - 'Up band'    (L108, T42, R144, B78)
+   |    |    | ['Up band', 'Toolbar3', 'Up bandToolbar']
+   |    |    | child_window(title="Up band", control_type="ToolBar")
+   |    |    |    | 
+   |    |    |    | Button - 'Up to "My Documents" (Alt + Up Arrow)'    (L108, T42, R141, B75)
+   |    |    |    | ['Up to "My Documents" (Alt + Up Arrow)', 'Up to "My Documents" (Alt + Up Arrow)Button', 'Button20']
+   |    |    |    | child_window(title="Up to "My Documents" (Alt + Up Arrow)", control_type="Button")
+   |    | 
+   |    | Pane - ''    (L144, T31, R727, B83)
+   |    | ['Pane7']
+   |    | child_window(auto_id="41477", control_type="Pane")
+   |    |    | 
+   |    |    | Progress - 'Loading'    (L146, T41, R725, B75)
+   |    |    | ['Loading', 'Progress', 'LoadingProgress']
+   |    |    | child_window(title="Loading", control_type="ProgressBar")
+   |    |    |    | 
+   |    |    |    | Pane - ''    (L146, T41, R657, B75)
+   |    |    |    | ['Pane8']
+   |    |    |    | 
+   |    |    |    | Toolbar - 'Address band'    (L657, T41, R725, B75)
+   |    |    |    | ['Address bandToolbar', 'Toolbar5', 'Address band']
+   |    |    |    | child_window(title="Address band", control_type="ToolBar")
+   |    | 
+   |    | Pane - ''    (L737, T37, R941, B77)
+   |    | ['Pane9']
+   |    |    | 
+   |    |    | Pane - ''    (L737, T40, R941, B76)
+   |    |    | ['Pane10']
+   |    |    |    | 
+   |    |    |    | Pane - ''    (L742, T40, R936, B76)
+   |    |    |    | ['Pane11']
+   | 
+   | TitleBar - ''    (L24, T3, R952, B31)
+   | ['TitleBar']
+   |    | 
+   |    | Menu - 'System'    (L8, T8, R30, B30)
+   |    | ['Menu', 'System', 'SystemMenu', 'System0', 'System1']
+   |    | child_window(title="System", auto_id="MenuBar", control_type="MenuBar")
+   |    |    | 
+   |    |    | MenuItem - 'System'    (L8, T8, R30, B30)
+   |    |    | ['MenuItem2', 'System2', 'SystemMenuItem']
+   |    |    | child_window(title="System", control_type="MenuItem")
+   |    | 
+   |    | Button - 'Close'    (L919, T1, R953, B31)
+   |    | ['Close', 'CloseButton', 'Button24']
+   |    | child_window(title="Close", control_type="Button")
