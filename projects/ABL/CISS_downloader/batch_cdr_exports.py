@@ -23,6 +23,31 @@ ATTEMPT_LOG_FILE = Path(
     "data/processed/edr/cdr_export_attempts.csv"
 )
 
+def wait_for_completed_file(
+    file_path: Path,
+    timeout_seconds: float = 45,
+    poll_seconds: float = 0.5,
+) -> bool:
+    deadline = time.monotonic() + timeout_seconds
+    previous_size = -1
+    stable_checks = 0
+
+    while time.monotonic() < deadline:
+        if file_path.is_file():
+            current_size = file_path.stat().st_size
+
+            if current_size > 0 and current_size == previous_size:
+                stable_checks += 1
+
+                if stable_checks >= 2:
+                    return True
+            else:
+                stable_checks = 0
+                previous_size = current_size
+
+        time.sleep(poll_seconds)
+
+    return False
 
 def copy_to_clipboard(text: str) -> None:
     for _ in range(5):
@@ -65,13 +90,13 @@ def navigate_top_address_bar(
 
     dialog.set_focus()
     dialog.type_keys("^l")
-    time.sleep(1)
+    time.sleep(0.4)
 
     dialog.type_keys("^v")
-    time.sleep(1)
+    time.sleep(0.4)
 
     dialog.type_keys("{ENTER}")
-    time.sleep(3)
+    time.sleep(1.5)
 
 
 def open_cdrx_report(
@@ -109,7 +134,7 @@ def open_cdrx_report(
     file_name_box.type_keys("{ENTER}")
 
     # Allow Bosch CDR to load the report.
-    time.sleep(10)
+    time.sleep(5)
 
 
 def open_export_dialog(
@@ -119,7 +144,7 @@ def open_export_dialog(
 ):
     main_window.set_focus()
     main_window.type_keys("%f")
-    time.sleep(1)
+    time.sleep(0.4)
 
     main_window.type_keys(
         f"{{DOWN {menu_down_count}}}"
@@ -210,9 +235,7 @@ def save_report_as_pdf(
     if overwrite_cancelled:
         return "already_present_not_overwritten"
 
-    time.sleep(15)
-
-    if pdf_file.exists():
+    if wait_for_completed_file(pdf_file):
         return "exported"
 
     return "not_created"
@@ -247,9 +270,7 @@ def save_report_as_csv(
     if overwrite_cancelled:
         return "already_present_not_overwritten"
 
-    time.sleep(15)
-
-    if csv_file.exists():
+    if wait_for_completed_file(csv_file):
         return "exported"
 
     return "not_created_or_not_supported"
@@ -259,7 +280,7 @@ def close_cdr(app: Application) -> None:
     try:
         main_window = get_main_window(app)
         main_window.type_keys("%{F4}")
-        time.sleep(3)
+        time.sleep(1.5)
     except Exception:
         pass
 

@@ -298,3 +298,14 @@ ForEach-Object {
 } |
 Select-Object case_id, vehicle_number, pdf_export_status, csv_export_status, error_message |
 Format-Table -AutoSize
+
+
+
+## Looking for and downloading just cases with .cdrx files
+
+
+uv run python edr_main.py --target-cdrx 10 --max-cases-scanned 20           
+
+uv run python edr_main.py --summary
+
+###
