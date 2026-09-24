@@ -436,7 +436,10 @@ def load_pending_inventory_rows() -> list[dict[str, str]]:
         pdf_file = export_directory / f"{cdrx_file.stem}.PDF"
         csv_file = export_directory / f"{cdrx_file.stem}.CSV"
 
-        if pdf_file.exists() and csv_file.exists():
+        if row["cdr_export_status"] in {
+            "pdf_and_csv_available",
+            "pdf_only_available",
+        }:
             continue
 
         row["cdrx_source_path"] = str(cdrx_file)

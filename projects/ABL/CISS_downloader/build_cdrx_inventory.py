@@ -97,12 +97,12 @@ def main() -> None:
 
                 pdf_file = (
                     export_directory
-                    / f"{cdrx_file.stem}_report.pdf"
+                    / f"{cdrx_file.stem}.PDF"
                 )
 
                 csv_file = (
                     export_directory
-                    / f"{cdrx_file.stem}_report.csv"
+                    / f"{cdrx_file.stem}.CSV"
                 )
 
                 pdf_exists = pdf_file.is_file()

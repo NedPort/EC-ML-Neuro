@@ -271,36 +271,6 @@ uv run python edr_cdr/build_cdrx_conversion_queue.py
 uv run python batch_cdr_exports.py --limit 10
 
 
-#####
-
-# See the files that actually exist in the EDR output folder
-Get-ChildItem data\processed\edr
-
-# Review every Bosch export attempt and its status
-Get-Content data\processed\edr\cdr_export_attempts.csv
-
-# More readable table: case, vehicle, PDF status, CSV status, error
-Import-Csv data\processed\edr\cdr_export_attempts.csv |
-Select-Object case_id, vehicle_number, pdf_export_status, csv_export_status, error_message |
-Format-Table -AutoSize
-
-
-
-#### final evaluation
-
-
-Import-Csv data\processed\edr\cdr_export_attempts.csv |
-Group-Object cdrx_source_path |
-ForEach-Object {
-    $_.Group |
-    Sort-Object attempted_at_utc |
-    Select-Object -Last 1
-} |
-Select-Object case_id, vehicle_number, pdf_export_status, csv_export_status, error_message |
-Format-Table -AutoSize
-
-
-
 ## Looking for and downloading just cases with .cdrx files
 
 
@@ -308,4 +278,9 @@ uv run python edr_main.py --target-cdrx 10 --max-cases-scanned 20
 
 uv run python edr_main.py --summary
 
-###
+### Using Software and Extracting CSV and PDF files  and Save them
+
+uv run python build_cdrx_inventory.py
+uv run python batch_cdr_exports.py --limit 1000
+
+##
