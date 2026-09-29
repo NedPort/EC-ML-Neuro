@@ -23,31 +23,6 @@ ATTEMPT_LOG_FILE = Path(
     "data/processed/edr/cdr_export_attempts.csv"
 )
 
-def wait_for_completed_file(
-    file_path: Path,
-    timeout_seconds: float = 45,
-    poll_seconds: float = 0.5,
-) -> bool:
-    deadline = time.monotonic() + timeout_seconds
-    previous_size = -1
-    stable_checks = 0
-
-    while time.monotonic() < deadline:
-        if file_path.is_file():
-            current_size = file_path.stat().st_size
-
-            if current_size > 0 and current_size == previous_size:
-                stable_checks += 1
-
-                if stable_checks >= 2:
-                    return True
-            else:
-                stable_checks = 0
-                previous_size = current_size
-
-        time.sleep(poll_seconds)
-
-    return False
 
 def copy_to_clipboard(text: str) -> None:
     for _ in range(5):
@@ -65,15 +40,90 @@ def copy_to_clipboard(text: str) -> None:
         except Exception:
             time.sleep(0.5)
 
-    raise RuntimeError(
-        "Could not access the Windows clipboard."
+    raise RuntimeError("Could not access the Windows clipboard.")
+
+
+def dismiss_report_generation_error() -> str | None:
+    """Dismiss Bosch's internal report-generation failure dialog."""
+
+    dialog = Desktop(backend="uia").window(
+        title="GenerateReportAutomated"
     )
+
+    if not dialog.exists(timeout=0.1):
+        return None
+
+    try:
+        dialog.set_focus()
+
+        ok_button = dialog.child_window(
+            title="OK",
+            control_type="Button",
+        )
+
+        if ok_button.exists(timeout=1):
+            ok_button.click_input()
+        else:
+            dialog.type_keys("{ENTER}")
+
+        time.sleep(0.5)
+
+    except Exception as error:
+        return (
+            "Bosch CDR report-generation error dialog appeared, "
+            f"but could not be dismissed: {type(error).__name__}: {error}"
+        )
+
+    return (
+        "Bosch CDR report-generation error: "
+        "GenerateReportAutomated, Error 91 "
+        "(Object variable or With block variable not set)."
+    )
+
+
+def raise_if_report_generation_error() -> None:
+    error_message = dismiss_report_generation_error()
+
+    if error_message is not None:
+        raise RuntimeError(error_message)
+
+
+def wait_for_completed_file(
+    file_path: Path,
+    timeout_seconds: float = 45,
+    poll_seconds: float = 0.5,
+) -> bool:
+    """Wait until a non-empty output file has a stable size."""
+
+    deadline = time.monotonic() + timeout_seconds
+    previous_size = -1
+    stable_checks = 0
+
+    while time.monotonic() < deadline:
+        raise_if_report_generation_error()
+
+        if file_path.is_file():
+            current_size = file_path.stat().st_size
+
+            if current_size > 0 and current_size == previous_size:
+                stable_checks += 1
+
+                if stable_checks >= 2:
+                    return True
+            else:
+                stable_checks = 0
+                previous_size = current_size
+
+        time.sleep(poll_seconds)
+
+    return False
 
 
 def get_main_window(app: Application):
     main_window = app.window(
-        title_re=".*Crash Data Retrieval.*"
+        title_re=r".*Crash Data Retrieval.*"
     )
+
     main_window.wait("visible", timeout=30)
     main_window.set_focus()
 
@@ -84,8 +134,8 @@ def navigate_top_address_bar(
     dialog,
     folder_path: Path,
 ) -> None:
-    # Ctrl + L moves focus to the top address bar.
-    # Clipboard paste preserves Windows backslashes exactly.
+    """Navigate using the dialog's top address bar."""
+
     copy_to_clipboard(str(folder_path))
 
     dialog.set_focus()
@@ -99,11 +149,23 @@ def navigate_top_address_bar(
     time.sleep(1.5)
 
 
+def get_file_name_box(dialog):
+    file_name_combo = dialog.child_window(
+        auto_id="1148",
+        control_type="ComboBox",
+    )
+
+    return file_name_combo.child_window(
+        control_type="Edit",
+    )
+
+
 def open_cdrx_report(
     app: Application,
     cdrx_file: Path,
 ) -> None:
     main_window = get_main_window(app)
+    raise_if_report_generation_error()
 
     main_window.type_keys("^o")
     time.sleep(2)
@@ -111,30 +173,57 @@ def open_cdrx_report(
     open_dialog = Desktop(backend="uia").window(
         title="OPEN CDR FILE"
     )
+
     open_dialog.wait("visible", timeout=15)
     open_dialog.set_focus()
 
-    # Top address bar: navigate to this vehicle folder.
     navigate_top_address_bar(
         dialog=open_dialog,
         folder_path=cdrx_file.parent,
     )
 
-    # Bottom File name box: enter only the CDRX filename.
-    file_name_combo = open_dialog.child_window(
-        auto_id="1148",
-        control_type="ComboBox",
-    )
-    file_name_box = file_name_combo.child_window(
-        control_type="Edit",
-    )
-
+    file_name_box = get_file_name_box(open_dialog)
     file_name_box.set_edit_text(cdrx_file.name)
     file_name_box.set_focus()
     file_name_box.type_keys("{ENTER}")
 
-    # Allow Bosch CDR to load the report.
+    # Allow Bosch CDR time to load the selected CDRX.
     time.sleep(5)
+    raise_if_report_generation_error()
+
+
+def wait_for_export_dialog_or_bosch_error(
+    dialog_title_pattern: str,
+    timeout_seconds: float = 20,
+):
+    deadline = time.monotonic() + timeout_seconds
+
+    while time.monotonic() < deadline:
+        cdr_error = dismiss_report_generation_error()
+
+        if cdr_error is not None:
+            raise RuntimeError(cdr_error)
+
+        for backend in ("win32", "uia"):
+            try:
+                save_dialog = Desktop(backend=backend).window(
+                    title_re=dialog_title_pattern
+                )
+
+                if save_dialog.exists(timeout=0.2):
+                    save_dialog.wait("visible", timeout=2)
+                    save_dialog.set_focus()
+                    return save_dialog
+
+            except Exception:
+                continue
+
+        time.sleep(0.3)
+
+    raise TimeoutError(
+        f"Timed out waiting for export dialog: "
+        f"{dialog_title_pattern}"
+    )
 
 
 def open_export_dialog(
@@ -150,18 +239,15 @@ def open_export_dialog(
         f"{{DOWN {menu_down_count}}}"
     )
     main_window.type_keys("{ENTER}")
-    time.sleep(2)
 
-    save_dialog = Desktop(backend="uia").window(
-        title_re=dialog_title_pattern
+    return wait_for_export_dialog_or_bosch_error(
+        dialog_title_pattern=dialog_title_pattern,
     )
-    save_dialog.wait("visible", timeout=15)
-    save_dialog.set_focus()
-
-    return save_dialog
 
 
 def cancel_overwrite_confirmation() -> bool:
+    """Click No if Bosch asks to overwrite an existing export."""
+
     confirmation_titles = [
         r"(?i)^pdf write$",
         r"(?i)^confirm save as$",
@@ -172,17 +258,28 @@ def cancel_overwrite_confirmation() -> bool:
             title_re=title_pattern
         )
 
-        if not dialog.exists(timeout=1):
+        if not dialog.exists(timeout=0.5):
             continue
 
-        no_button = dialog.child_window(
-            title="No",
-            control_type="Button",
-        )
+        try:
+            dialog.set_focus()
 
-        if no_button.exists(timeout=1):
-            no_button.click_input()
-            time.sleep(2)
+            no_button = dialog.child_window(
+                title="No",
+                control_type="Button",
+            )
+
+            if no_button.exists(timeout=1):
+                no_button.click_input()
+            else:
+                dialog.type_keys("{ESC}")
+
+            time.sleep(1)
+            return True
+
+        except Exception:
+            dialog.type_keys("{ESC}")
+            time.sleep(1)
             return True
 
     return False
@@ -192,16 +289,15 @@ def save_to_export_directory(
     save_dialog,
     export_directory: Path,
 ) -> bool:
-    # Top address bar: navigate to cdr_exports.
+    """Navigate to cdr_exports and save using Bosch's native filename."""
+
     navigate_top_address_bar(
         dialog=save_dialog,
         folder_path=export_directory,
     )
 
-    # Bosch retains the source CDRX basename and
-    # automatically applies PDF or CSV extension.
     save_dialog.type_keys("%s")
-    time.sleep(2)
+    time.sleep(1)
 
     return cancel_overwrite_confirmation()
 
@@ -210,7 +306,7 @@ def save_report_as_pdf(
     app: Application,
     pdf_file: Path,
 ) -> str:
-    if pdf_file.exists():
+    if pdf_file.is_file():
         return "already_present"
 
     pdf_file.parent.mkdir(
@@ -227,12 +323,10 @@ def save_report_as_pdf(
         dialog_title_pattern=r"(?i)^save report$",
     )
 
-    overwrite_cancelled = save_to_export_directory(
+    if save_to_export_directory(
         save_dialog=save_dialog,
         export_directory=pdf_file.parent,
-    )
-
-    if overwrite_cancelled:
+    ):
         return "already_present_not_overwritten"
 
     if wait_for_completed_file(pdf_file):
@@ -245,7 +339,7 @@ def save_report_as_csv(
     app: Application,
     csv_file: Path,
 ) -> str:
-    if csv_file.exists():
+    if csv_file.is_file():
         return "already_present"
 
     csv_file.parent.mkdir(
@@ -262,12 +356,10 @@ def save_report_as_csv(
         dialog_title_pattern=r"(?i)^save as csv file$",
     )
 
-    overwrite_cancelled = save_to_export_directory(
+    if save_to_export_directory(
         save_dialog=save_dialog,
         export_directory=csv_file.parent,
-    )
-
-    if overwrite_cancelled:
+    ):
         return "already_present_not_overwritten"
 
     if wait_for_completed_file(csv_file):
@@ -278,12 +370,34 @@ def save_report_as_csv(
 
 def close_cdr(app: Application) -> None:
     try:
+        for backend in ("win32", "uia"):
+            for title_pattern in (
+                r"(?i)^save report$",
+                r"(?i)^save as csv file$",
+                r"(?i)^open cdr file$",
+            ):
+                dialog = Desktop(backend=backend).window(
+                    title_re=title_pattern
+                )
+
+                if dialog.exists(timeout=0.2):
+                    dialog.set_focus()
+                    dialog.type_keys("{ESC}")
+                    time.sleep(0.5)
+
+        dismiss_report_generation_error()
+
         main_window = get_main_window(app)
         main_window.type_keys("%{F4}")
-        time.sleep(1.5)
-    except Exception:
-        pass
+        time.sleep(1)
 
+        app.kill()
+
+    except Exception:
+        try:
+            app.kill()
+        except Exception:
+            pass
 
 def write_attempt_log(
     case_id: int,
@@ -342,7 +456,7 @@ def export_one_cdrx(
     pdf_file = export_directory / f"{cdrx_file.stem}.PDF"
     csv_file = export_directory / f"{cdrx_file.stem}.CSV"
 
-    if pdf_file.exists() and csv_file.exists():
+    if pdf_file.is_file() and csv_file.is_file():
         return {
             "pdf_status": "already_present",
             "csv_status": "already_present",
@@ -432,14 +546,18 @@ def load_pending_inventory_rows() -> list[dict[str, str]]:
             continue
 
         export_directory = cdrx_file.parent / "cdr_exports"
-
         pdf_file = export_directory / f"{cdrx_file.stem}.PDF"
         csv_file = export_directory / f"{cdrx_file.stem}.CSV"
 
-        if row["cdr_export_status"] in {
-            "pdf_and_csv_available",
-            "pdf_only_available",
-        }:
+        # Always skip files that already have both exports.
+        if pdf_file.is_file() and csv_file.is_file():
+            continue
+
+        # Skip known PDF-only reports only when their PDF remains present.
+        if (
+            row.get("cdr_export_status") == "pdf_only_available"
+            and pdf_file.is_file()
+        ):
             continue
 
         row["cdrx_source_path"] = str(cdrx_file)
@@ -449,16 +567,23 @@ def load_pending_inventory_rows() -> list[dict[str, str]]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description=(
+            "Export pending Bosch CDRX files to PDF and CSV."
+        )
+    )
 
     parser.add_argument(
         "--limit",
         type=int,
         default=3,
-        help="Number of pending CDRX files to process.",
+        help="Maximum number of pending CDRX files to process.",
     )
 
     arguments = parser.parse_args()
+
+    if arguments.limit < 1:
+        raise SystemExit("--limit must be at least 1.")
 
     pending_rows = load_pending_inventory_rows()
 
@@ -502,17 +627,11 @@ def main() -> None:
             f"CSV: {result['csv_status']}"
         ] += 1
 
-        print(
-            f"PDF status: {result['pdf_status']}"
-        )
-        print(
-            f"CSV status: {result['csv_status']}"
-        )
+        print(f"PDF status: {result['pdf_status']}")
+        print(f"CSV status: {result['csv_status']}")
 
         if result["error_message"]:
-            print(
-                f"Error: {result['error_message']}"
-            )
+            print(f"Error: {result['error_message']}")
 
     print("\nBatch complete.")
 
