@@ -284,3 +284,14 @@ uv run python build_cdrx_inventory.py
 uv run python batch_cdr_exports.py --limit 1000
 
 ##
+uv run python build_cdrx_inventory.py
+uv run python build_edr_export_inventory.py   #### Give us information of how many csv and pdf files we converted
+
+
+uv run python build_edr_csv_family_inventory.py   ## Info regarding the Provisional parser families
+
+
+
+uv run python parse_edr_csv_raw_sections.py    ######
+
+uv run python build_edr_crash_signal_timeseries.py  ### This is not reliable now, I ma working on it
