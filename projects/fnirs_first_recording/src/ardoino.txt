@@ -1,0 +1,399 @@
+#include <Adafruit_ADS1X15.h>
+#include <Wire.h>
+
+// ─────────────────────────────────────────────────────────────
+// SETTINGS – regular fNIRS operation
+// ─────────────────────────────────────────────────────────────
+#define LED_ON_TIME_US   4000
+#define DARK_DELAY_MS    96
+#define N_DARK_READS     4
+
+// XIAO ESP32S3 D-pin setup
+#define SDA_PIN          D4
+#define SCL_PIN          D5
+
+#define NUM_SENSORS      6
+
+// LED pins:
+// LED 1A = D0, LED 1B = D1
+// LED 2A = D2, LED 2B = D3
+const uint8_t LED_PINS[2][2] = {
+  {D0, D1},   // Group 0: 730nm(A), 850nm(B)
+  {D2, D3}    // Group 1: 730nm(A), 850nm(B)
+};
+
+const uint8_t GROUP_S_START[2] = {0, 2};
+const uint8_t GROUP_S_END[2]   = {3, 5};
+
+// Index:  0     1     2     3     4     5
+// Sensor: S1    S2    S3    S4    S5    S6
+// ADC:    1     2     1     2     1     2
+// Ch:     0     0     1     1     2     2
+struct SensorDef {
+  uint8_t adc;
+  uint8_t ch;
+  uint8_t num;
+};
+
+const SensorDef SENSOR_MAP[NUM_SENSORS] = {
+  {0, 0, 1},
+  {1, 0, 2},
+  {0, 1, 3},
+  {1, 1, 4},
+  {0, 2, 5},
+  {1, 2, 6}
+};
+
+uint8_t logicalChBase(uint8_t mapIdx, uint8_t group) {
+  return (group == 0) ? mapIdx + 1 : mapIdx + 3;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SCHEDULER
+// ─────────────────────────────────────────────────────────────
+uint8_t schedIdx = 0;
+
+const uint8_t SCHED_GROUP[4] = {0, 0, 1, 1};
+const uint8_t SCHED_WL[4]    = {0, 1, 0, 1};
+
+void advanceScheduler() {
+  schedIdx = (schedIdx + 1) % 4;
+}
+
+// ─────────────────────────────────────────────────────────────
+// ADC OBJECTS
+// ─────────────────────────────────────────────────────────────
+Adafruit_ADS1115 adc1;
+Adafruit_ADS1115 adc2;
+
+unsigned long t0 = 0;
+
+uint16_t muxForCh(uint8_t ch) {
+  switch (ch) {
+    case 0:  return ADS1X15_REG_CONFIG_MUX_SINGLE_0;
+    case 1:  return ADS1X15_REG_CONFIG_MUX_SINGLE_1;
+    case 2:  return ADS1X15_REG_CONFIG_MUX_SINGLE_2;
+    default: return ADS1X15_REG_CONFIG_MUX_SINGLE_0;
+  }
+}
+
+float countsToVolts(int16_t raw) {
+  return raw * (4.096f / 32768.0f);
+}
+
+void allLedsOff() {
+  for (uint8_t g = 0; g < 2; g++) {
+    for (uint8_t w = 0; w < 2; w++) {
+      digitalWrite(LED_PINS[g][w], LOW);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ISR TIMER
+// One job: set adcTick every 1ms during LED-on window only.
+// ─────────────────────────────────────────────────────────────
+hw_timer_t* adcTimer = nullptr;
+volatile bool adcTick = false;
+
+void ARDUINO_ISR_ATTR onAdcTimer() {
+  adcTick = true;
+}
+
+// ─────────────────────────────────────────────────────────────
+// BUFFERS
+// ─────────────────────────────────────────────────────────────
+volatile int16_t       rawVals[NUM_SENSORS];
+volatile unsigned long rawTimes[NUM_SENSORS];
+
+volatile int16_t       darkVals[NUM_SENSORS][N_DARK_READS];
+volatile unsigned long darkTimes[NUM_SENSORS][N_DARK_READS];
+
+// ─────────────────────────────────────────────────────────────
+// STATE MACHINE
+// ─────────────────────────────────────────────────────────────
+enum PulseState {
+  PS_IDLE,
+  PS_RAW_WAIT,
+  PS_RAW_HOLD,
+  PS_DARK_DELAY,
+  PS_DARK_START,
+  PS_DARK_WAIT,
+  PS_OUTPUT
+};
+
+PulseState pulseState = PS_IDLE;
+
+uint8_t  curGroup  = 0;
+uint8_t  curWlIdx  = 0;
+uint16_t curWlNm   = 730;
+char     curWlChar = 'A';
+uint8_t  curLedPin = 0;
+
+uint8_t sStart = 0;
+uint8_t sEnd   = 0;
+
+uint8_t chStart = 0;
+uint8_t chEnd   = 0;
+uint8_t curCh   = 0;
+uint8_t curDark = 0;
+
+unsigned long pulseStartUs = 0;
+unsigned long ledOffUs     = 0;
+unsigned long ledOffStamp  = 0;
+
+// ─────────────────────────────────────────────────────────────
+// BEGIN ONE LED PULSE
+// ─────────────────────────────────────────────────────────────
+void beginPulse(uint8_t group, uint8_t wlIdx) {
+  curGroup  = group;
+  curWlIdx  = wlIdx;
+  curWlNm   = (wlIdx == 0) ? 730 : 850;
+  curWlChar = (wlIdx == 0) ? 'A' : 'B';
+  curLedPin = LED_PINS[group][wlIdx];
+
+  sStart = GROUP_S_START[group];
+  sEnd   = GROUP_S_END[group];
+
+  chStart = sStart / 2;
+  chEnd   = sEnd / 2;
+
+  curCh   = chStart;
+  curDark = 0;
+
+  ledOffStamp = 0;
+
+  for (uint8_t i = 0; i < NUM_SENSORS; i++) {
+    rawVals[i]  = 0;
+    rawTimes[i] = 0;
+
+    for (uint8_t d = 0; d < N_DARK_READS; d++) {
+      darkVals[i][d]  = 0;
+      darkTimes[i][d] = 0;
+    }
+  }
+
+  adc1.setDataRate(RATE_ADS1115_860SPS);
+  adc2.setDataRate(RATE_ADS1115_860SPS);
+
+  allLedsOff();
+  digitalWrite(curLedPin, HIGH);
+
+  pulseStartUs = micros();
+
+  uint16_t mux = muxForCh(curCh);
+
+  adc1.startADCReading(mux, false);
+  adc2.startADCReading(mux, false);
+
+  adcTick = false;
+  timerStart(adcTimer);
+
+  pulseState = PS_RAW_WAIT;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SERVICE STATE MACHINE
+// ─────────────────────────────────────────────────────────────
+void servicePulse() {
+  switch (pulseState) {
+
+    case PS_IDLE:
+      beginPulse(SCHED_GROUP[schedIdx], SCHED_WL[schedIdx]);
+      advanceScheduler();
+      break;
+
+    case PS_RAW_WAIT:
+      if (!adcTick) break;
+
+      adcTick = false;
+
+      if (!adc1.conversionComplete() || !adc2.conversionComplete()) {
+        break;
+      }
+
+      {
+        unsigned long sampleUs = micros() - t0;
+
+        rawVals[curCh * 2]     = adc1.getLastConversionResults();
+        rawVals[curCh * 2 + 1] = adc2.getLastConversionResults();
+
+        rawTimes[curCh * 2]     = sampleUs;
+        rawTimes[curCh * 2 + 1] = sampleUs;
+
+        if (curCh < chEnd) {
+          curCh++;
+
+          uint16_t mux = muxForCh(curCh);
+
+          adc1.startADCReading(mux, false);
+          adc2.startADCReading(mux, false);
+        } else {
+          pulseState = PS_RAW_HOLD;
+        }
+      }
+
+      break;
+
+    case PS_RAW_HOLD:
+      if ((micros() - pulseStartUs) >= LED_ON_TIME_US) {
+        digitalWrite(curLedPin, LOW);
+
+        timerStop(adcTimer);
+        adcTick = false;
+
+        ledOffUs = micros();
+        ledOffStamp = ledOffUs - t0;
+
+        curCh = chStart;
+        curDark = 0;
+
+        pulseState = PS_DARK_DELAY;
+      }
+
+      break;
+
+    case PS_DARK_DELAY:
+      if ((micros() - ledOffUs) >= ((unsigned long)DARK_DELAY_MS * 1000UL)) {
+        pulseState = PS_DARK_START;
+      }
+
+      break;
+
+    case PS_DARK_START: {
+      uint16_t mux = muxForCh(curCh);
+
+      adc1.startADCReading(mux, false);
+      adc2.startADCReading(mux, false);
+
+      pulseState = PS_DARK_WAIT;
+      break;
+    }
+
+    case PS_DARK_WAIT:
+      if (adc1.conversionComplete() && adc2.conversionComplete()) {
+        unsigned long darkSampleUs = micros() - t0;
+
+        darkVals[curCh * 2][curDark]     = adc1.getLastConversionResults();
+        darkVals[curCh * 2 + 1][curDark] = adc2.getLastConversionResults();
+
+        darkTimes[curCh * 2][curDark]     = darkSampleUs;
+        darkTimes[curCh * 2 + 1][curDark] = darkSampleUs;
+
+        curDark++;
+
+        if (curDark < N_DARK_READS) {
+          pulseState = PS_DARK_START;
+        } else {
+          curDark = 0;
+
+          if (curCh < chEnd) {
+            curCh++;
+            pulseState = PS_DARK_START;
+          } else {
+            pulseState = PS_OUTPUT;
+          }
+        }
+      }
+
+      break;
+
+    case PS_OUTPUT:
+      for (uint8_t i = sStart; i <= sEnd; i++) {
+        uint8_t chBase = logicalChBase(i, curGroup);
+
+        Serial.print(chBase);
+        Serial.print(curWlChar);
+        Serial.print(',');
+
+        Serial.print(SENSOR_MAP[i].num);
+        Serial.print(',');
+
+        Serial.print(curWlNm);
+        Serial.print(',');
+
+        Serial.print(countsToVolts(rawVals[i]), 6);
+        Serial.print(',');
+
+        Serial.print(rawTimes[i]);
+        Serial.print(',');
+
+        Serial.print(ledOffStamp);
+        Serial.print(',');
+
+        for (uint8_t d = 0; d < N_DARK_READS; d++) {
+          Serial.print(countsToVolts(darkVals[i][d]), 6);
+          Serial.print(',');
+
+          if (d < N_DARK_READS - 1) {
+            Serial.print(darkTimes[i][d]);
+            Serial.print(',');
+          } else {
+            Serial.println(darkTimes[i][d]);
+          }
+        }
+      }
+
+      pulseState = PS_IDLE;
+      break;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// SETUP
+// ─────────────────────────────────────────────────────────────
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+
+  Wire.begin(SDA_PIN, SCL_PIN);
+  Wire.setClock(400000);
+
+  if (!adc1.begin(0x48)) {
+    Serial.println("ERROR: ADS1115 at 0x48 not found");
+    while (1) delay(10);
+  }
+
+  if (!adc2.begin(0x49)) {
+    Serial.println("ERROR: ADS1115 at 0x49 not found");
+    while (1) delay(10);
+  }
+
+  adc1.setGain(GAIN_ONE);
+  adc2.setGain(GAIN_ONE);
+
+  for (uint8_t g = 0; g < 2; g++) {
+    for (uint8_t w = 0; w < 2; w++) {
+      pinMode(LED_PINS[g][w], OUTPUT);
+      digitalWrite(LED_PINS[g][w], LOW);
+    }
+  }
+
+  allLedsOff();
+
+  for (uint8_t i = 0; i < NUM_SENSORS; i++) {
+    rawVals[i]  = 0;
+    rawTimes[i] = 0;
+
+    for (uint8_t d = 0; d < N_DARK_READS; d++) {
+      darkVals[i][d]  = 0;
+      darkTimes[i][d] = 0;
+    }
+  }
+
+  t0 = micros();
+
+  Serial.println("Channel,Sensor,Wavelength,Raw_V,Raw_us,LED_off_us,D0,D0_us,D1,D1_us,D2,D2_us,D3,D3_us");
+
+  adcTimer = timerBegin(1000000);
+  timerAttachInterrupt(adcTimer, &onAdcTimer);
+  timerAlarm(adcTimer, 1000, true, 0);
+  timerStop(adcTimer);
+}
+
+// ─────────────────────────────────────────────────────────────
+// LOOP
+// ─────────────────────────────────────────────────────────────
+void loop() {
+  servicePulse();
+}
