@@ -1,0 +1,9 @@
+# Raw fNIRS recordings
+data/raw/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+.venv/
