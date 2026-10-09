@@ -15,7 +15,7 @@ file_path = (
     PROJECT_ROOT
     / "data"
     / "raw"
-    / "NedaSignal.txt"
+    / "Oscar Signal.txt"
 )
 
 figure_dir = (
@@ -616,3 +616,150 @@ plt.savefig(
 )
 
 plt.close()
+
+
+# ============================================================
+# 16. RAW VS DARK (D3) SIGNAL ANALYSIS
+# ============================================================
+
+# Create output directory
+comparison_dir = (
+    PROJECT_ROOT
+    / "results"
+    / "figures"
+    / "raw_dark_comparison"
+)
+
+comparison_dir.mkdir(parents=True, exist_ok=True)
+
+# Analyze all 8 optical channels
+for channel_number in range(1, 9):
+
+    fig, axes = plt.subplots(
+        2, 3,
+        figsize=(16, 8),
+        sharex=True
+    )
+
+    for row, (suffix, wavelength) in enumerate(
+        [("A", 730), ("B", 850)]
+    ):
+
+        channel_name = f"{channel_number}{suffix}"
+
+        channel_df = (
+            df_valid[
+                df_valid["Channel"] == channel_name
+            ]
+            .sort_values("Raw_us")
+            .copy()
+        )
+
+        # Time relative to recording start
+        t = channel_df["Time_s"].to_numpy()
+
+        # Raw detector voltage
+        raw = channel_df["Raw_V"].to_numpy()
+
+        # Last dark measurement
+        dark = channel_df["D3"].to_numpy()
+
+        # Dark-subtracted voltage
+        corrected = raw - dark
+
+        # Store corrected signal for future analysis
+        df_valid.loc[
+            channel_df.index,
+            "Raw_minus_D3"
+        ] = corrected
+
+        # --------------------------------------------
+        # Plot 1: Raw voltage
+        # --------------------------------------------
+        axes[row, 0].plot(t, raw, linewidth=1)
+
+        axes[row, 0].set_title(
+            f"{channel_name} ({wavelength} nm) - Raw"
+        )
+
+        axes[row, 0].set_ylabel("Voltage (V)")
+        axes[row, 0].grid(alpha=0.3)
+
+        # --------------------------------------------
+        # Plot 2: D3 dark voltage
+        # --------------------------------------------
+        axes[row, 1].plot(
+            t, dark, linewidth=1
+        )
+
+        axes[row, 1].set_title(
+            f"{channel_name} ({wavelength} nm) - D3"
+        )
+
+        axes[row, 1].grid(alpha=0.3)
+
+        # --------------------------------------------
+        # Plot 3: Raw minus D3
+        # --------------------------------------------
+        axes[row, 2].plot(
+            t, corrected, linewidth=1
+        )
+
+        axes[row, 2].axhline(
+            0, color="gray",
+            linestyle="--",
+            linewidth=0.8
+        )
+
+        axes[row, 2].set_title(
+            f"{channel_name} ({wavelength} nm) - Raw-D3"
+        )
+
+        axes[row, 2].grid(alpha=0.3)
+
+    for ax in axes[-1, :]:
+        ax.set_xlabel("Time (s)")
+
+    fig.suptitle(
+        f"Channel {channel_number} - Raw vs Dark Analysis",
+        fontsize=14
+    )
+
+    plt.tight_layout()
+
+    output_file = (
+        comparison_dir
+        / f"channel_{channel_number}_raw_dark.png"
+    )
+
+    plt.savefig(
+        output_file,
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.close(fig)
+
+    print(f"Saved: {output_file}")
+
+# ============================================================
+# 17. DARK-SUBTRACTED SIGNAL STATISTICS
+# ============================================================
+
+print("\n-----------------------------------")
+print("RAW MINUS D3 STATISTICS")
+print("-----------------------------------")
+
+corrected_stats = (
+    df_valid
+    .groupby("Channel")["Raw_minus_D3"]
+    .agg(
+        count="count",
+        mean="mean",
+        std="std",
+        min="min",
+        max="max"
+    )
+)
+
+print(corrected_stats.round(6))

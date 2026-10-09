@@ -1,5 +1,7 @@
 # Raw fNIRS recordings
 data/raw/
+data/
+results/
 
 # Python cache
 __pycache__/
@@ -7,3 +9,4 @@ __pycache__/
 
 # Virtual environment
 .venv/
+

@@ -1,0 +1,28 @@
+
+# ==========================================
+# NSF_Ps - Shared Python Dependencies
+# ==========================================
+
+# Numerical computing
+numpy
+scipy
+
+# Data processing
+pandas
+openpyxl
+
+# Visualization
+matplotlib
+seaborn
+plotly
+
+# Signal processing and fNIRS
+mne
+mne-nirs
+
+# Machine learning
+scikit-learn
+
+# Utilities
+tqdm
+pyyaml
