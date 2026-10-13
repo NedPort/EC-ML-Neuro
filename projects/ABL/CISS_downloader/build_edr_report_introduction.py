@@ -30,7 +30,7 @@ BODY = re.compile(r'^(?:System Status|System Configuration|PCM Module Informatio
 # not the byte block. A heading without the colon outside documentation is a stop.
 DOC_HEAD = re.compile(r'^(?:Comments|Data Limitations|Data Source|PCM Data Source|Data Element Sign Convention|Recorded Crash Events|Data|Hexadecimal Data):?$',re.I)
 BASE = ['report_id','case_id','vehicle_number','export_basename']
-FIELD = BASE+['source_format','source_path','source_sha256','source_page','source_record','source_record_end','source_cells_json','source_bbox_json','field_name','field_label_raw','value_raw','value_text','value_status','extraction_method']
+FIELD = BASE+['source_format','source_path','source_sha256','source_page','source_record','source_record_end','source_cells_json','source_bbox_json','field_name','field_label_raw','source_label_status','value_raw','value_text','value_status','extraction_method']
 DOC = BASE+['source_format','source_path','source_sha256','source_page','source_record','documentation_category','text_raw','extraction_status']
 AUDIT = BASE+['source_format','source_path','status','metadata_field_count','documentation_block_count','intro_pages','body_boundary','issue']
 INDEX = BASE+['csv_path','pdf_path','csv_status','pdf_status','metadata_status','documentation_status']
@@ -56,7 +56,7 @@ def write_csv(p,rows,cols):
 def evidence(base,fmt,path,sha,label,value,**location):
  return {**base,'source_format':fmt,'source_path':str(path),'source_sha256':sha,
   'source_page':'','source_record':'','source_record_end':'','source_cells_json':'','source_bbox_json':'','field_name':canonical(label),
-  'field_label_raw':label,'value_raw':value,'value_text':norm(value),
+  'field_label_raw':label,'source_label_status':'present','value_raw':value,'value_text':norm(value),
   'value_status':value_state(value),**location}
 
 def csv_intro(path,base):
@@ -73,16 +73,28 @@ def csv_intro(path,base):
    break
   if rr and rr[0].strip():
    label=rr[0]
-   continuation=re.fullmatch(r'(?:Event Record \d+|Record \d+|Event \d+|(?:First|Second|Third) Record|Most Recent Event|\d+(?:st|nd|rd|th) Prior Event)(?:\s*\([^\n]*\))?\s*,?',norm(label),re.I)
+   event_pattern=r'(?:Event Record \d+|Record \d+|Event \d+|(?:First|Second|Third) Record|Most Recent Event|\d+(?:st|nd|rd|th) Prior Event|(?:locked|unlocked) (?:frontal|side|rollover) event|unlocked events?|Fuel cutoff level \d+)(?:\s*\([^\n]*\))?\s*,?'
+   continuation=re.fullmatch(event_pattern,norm(label),re.I)
    previous=fields[-1] if fields else None
-   if len(filled)==1 and continuation and previous and previous['field_name']=='events_recovered_text' and int(previous['source_record_end'])==end:
+   adjacent=previous and int(previous['source_record_end'] or 0)==end
+   if len(filled)==1 and continuation and adjacent and previous['field_name']=='events_recovered_text':
     previous['value_raw']+='\n'+label
     previous['value_text']=norm(previous['value_raw'])
     previous['source_record_end']=end+1
     cells=json.loads(previous['source_cells_json'])
     cells.extend({'record':end+1,'column':ci+1,'value_raw':v} for ci,v in enumerate(rr))
     previous['source_cells_json']=json.dumps(cells,ensure_ascii=False)
-    previous['extraction_method']='original_csv_intro_field_with_verified_event_continuation'
+    if previous['source_label_status']=='present':
+     previous['extraction_method']='original_csv_intro_field_with_verified_event_continuation'
+   elif len(filled)==1 and adjacent and previous['field_name']=='acm_adapter_detected' and re.fullmatch(r'(?:First|Second|Third) Record|None',norm(label),re.I):
+    # Verified Ford export layout: an unlabeled block follows adapter status.
+    # Mark the absent label and retain candidate status; do not infer an event ID.
+    cells=[{'record':end+1,'column':ci+1,'value_raw':v} for ci,v in enumerate(rr)]
+    item=evidence(base,'csv',path,sha,'Event(s) recovered',label,source_record=end+1,source_record_end=end+1,source_cells_json=json.dumps(cells,ensure_ascii=False),extraction_method='csv_unlabeled_event_description_candidate_after_adapter')
+    item['field_label_raw']=''
+    item['source_label_status']='absent_contextual_candidate'
+    fields.append(item)
+    issues.append('unlabeled_event_description_candidate_requires_review')
    elif len(rr)>1:
     if len(rr)>2 and any(v.strip() for v in rr[2:]):
      value=json.dumps(rr[1:],ensure_ascii=False);issues.append('multivalue_intro_field_preserved_as_json')
@@ -92,20 +104,8 @@ def csv_intro(path,base):
    elif key(label).startswith('system:'):
     fields.append(evidence(base,'csv',path,sha,'System',label.split(':',1)[1],source_record=end+1,extraction_method='original_csv_system_label'))
    elif label.strip():
-    # Only a verified event-label pattern may extend the immediately preceding
-    # events-recovered field. Unknown single-cell text remains documented.
-    continuation=re.fullmatch(r'(?:Event Record \d+|Record \d+|Event \d+|(?:First|Second|Third) Record|Most Recent Event|\d+(?:st|nd|rd|th) Prior Event)(?:\s*\([^\n]*\))?\s*,?',norm(label),re.I)
-    previous=fields[-1] if fields else None
-    if continuation and previous and previous['field_name']=='events_recovered_text' and int(previous['source_record_end'])==end:
-     previous['value_raw']+='\n'+label
-     previous['value_text']=norm(previous['value_raw'])
-     previous['source_record_end']=end+1
-     cells=json.loads(previous['source_cells_json']);cells.append({'record':end+1,'column':1,'value_raw':label})
-     previous['source_cells_json']=json.dumps(cells,ensure_ascii=False)
-     previous['extraction_method']='original_csv_intro_field_with_verified_event_continuation'
-    else:
-     issues.append('unrecognized_single_cell_intro_content')
-     docs.append({**base,'source_format':'csv','source_path':str(path),'source_sha256':sha,'source_page':'','source_record':end+1,'documentation_category':'unresolved_introductory_content','text_raw':label,'extraction_status':'unresolved_source_text_preserved'})
+    issues.append('unrecognized_single_cell_intro_content')
+    docs.append({**base,'source_format':'csv','source_path':str(path),'source_sha256':sha,'source_page':'','source_record':end+1,'documentation_category':'unresolved_introductory_content','text_raw':label,'extraction_status':'unresolved_source_text_preserved'})
   end+=1
  # System labels can precede CDR FILE INFORMATION.
  for ri,r in enumerate(rows[:start]):
@@ -256,7 +256,7 @@ def main():
  p.add_argument('--inventory',default='data/processed/edr/edr_export_inventory.csv')
  p.add_argument('--reports',default='data/processed/edr/csv_extraction_v1/reports.csv')
  p.add_argument('--source-root',default='data/temp')
- p.add_argument('--output-directory',default='data/processed/edr/group1_v3')
+ p.add_argument('--output-directory',default='data/processed/edr/group1_v4')
  p.add_argument('--max-intro-pages',type=int,default=15)
  p.add_argument('--limit',type=int)
  a=p.parse_args()
