@@ -10,6 +10,7 @@ dependencies = [
     "pandas",
     "matplotlib",
     "scikit-learn",
+    "pyvista>=0.49.1",
 ]
 
 [tool.uv]

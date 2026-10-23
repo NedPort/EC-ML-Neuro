@@ -1,0 +1,3002 @@
+{
+  "VisCent_Striate_1_LH": [
+    120,
+    18,
+    135
+  ],
+  "VisCent_Striate_2_LH": [
+    120,
+    18,
+    136
+  ],
+  "VisCent_Striate_3_LH": [
+    120,
+    18,
+    137
+  ],
+  "VisCent_ExStr_1_LH": [
+    120,
+    18,
+    128
+  ],
+  "VisCent_ExStr_2_LH": [
+    120,
+    18,
+    129
+  ],
+  "VisCent_ExStr_3_LH": [
+    120,
+    18,
+    130
+  ],
+  "VisCent_ExStr_4_LH": [
+    120,
+    18,
+    131
+  ],
+  "VisCent_ExStr_5_LH": [
+    120,
+    18,
+    132
+  ],
+  "VisCent_ExStr_6_LH": [
+    120,
+    18,
+    133
+  ],
+  "VisCent_ExStr_7_LH": [
+    120,
+    18,
+    134
+  ],
+  "VisCent_ExStr_8_LH": [
+    120,
+    18,
+    138
+  ],
+  "VisCent_ExStr_9_LH": [
+    120,
+    18,
+    139
+  ],
+  "VisCent_ExStr_10_LH": [
+    120,
+    18,
+    140
+  ],
+  "VisCent_ExStr_11_LH": [
+    120,
+    18,
+    141
+  ],
+  "VisCent_ExStr_12_LH": [
+    120,
+    18,
+    142
+  ],
+  "VisCent_ExStr_13_LH": [
+    120,
+    19,
+    135
+  ],
+  "VisCent_ExStr_14_LH": [
+    120,
+    19,
+    136
+  ],
+  "VisCent_ExStr_15_LH": [
+    120,
+    19,
+    137
+  ],
+  "VisCent_ExStr_16_LH": [
+    120,
+    19,
+    138
+  ],
+  "VisCent_ExStr_17_LH": [
+    120,
+    19,
+    139
+  ],
+  "VisPeri_StriCal_1_LH": [
+    255,
+    0,
+    1
+  ],
+  "VisPeri_StriCal_2_LH": [
+    255,
+    0,
+    2
+  ],
+  "VisPeri_StriCal_3_LH": [
+    255,
+    0,
+    3
+  ],
+  "VisPeri_StriCal_4_LH": [
+    255,
+    0,
+    4
+  ],
+  "VisPeri_StriCal_5_LH": [
+    255,
+    0,
+    5
+  ],
+  "VisPeri_ExStrInf_1_LH": [
+    255,
+    0,
+    0
+  ],
+  "VisPeri_ExStrInf_2_LH": [
+    255,
+    0,
+    6
+  ],
+  "VisPeri_ExStrInf_3_LH": [
+    255,
+    0,
+    7
+  ],
+  "VisPeri_ExStrInf_4_LH": [
+    255,
+    0,
+    8
+  ],
+  "VisPeri_ExStrInf_5_LH": [
+    255,
+    1,
+    1
+  ],
+  "VisPeri_ExStrSup_1_LH": [
+    255,
+    1,
+    2
+  ],
+  "VisPeri_ExStrSup_2_LH": [
+    255,
+    1,
+    3
+  ],
+  "VisPeri_ExStrSup_3_LH": [
+    255,
+    1,
+    4
+  ],
+  "VisPeri_ExStrSup_4_LH": [
+    255,
+    1,
+    5
+  ],
+  "VisPeri_ExStrSup_5_LH": [
+    255,
+    1,
+    6
+  ],
+  "VisPeri_ExStrSup_6_LH": [
+    255,
+    1,
+    7
+  ],
+  "VisPeri_ExStrSup_7_LH": [
+    255,
+    2,
+    0
+  ],
+  "SomMotA_1_LH": [
+    70,
+    129,
+    175
+  ],
+  "SomMotA_2_LH": [
+    70,
+    129,
+    176
+  ],
+  "SomMotA_3_LH": [
+    70,
+    129,
+    177
+  ],
+  "SomMotA_4_LH": [
+    70,
+    129,
+    178
+  ],
+  "SomMotA_5_LH": [
+    70,
+    129,
+    179
+  ],
+  "SomMotA_6_LH": [
+    70,
+    129,
+    180
+  ],
+  "SomMotA_7_LH": [
+    70,
+    130,
+    173
+  ],
+  "SomMotA_8_LH": [
+    70,
+    130,
+    174
+  ],
+  "SomMotA_9_LH": [
+    70,
+    130,
+    175
+  ],
+  "SomMotA_10_LH": [
+    70,
+    130,
+    176
+  ],
+  "SomMotA_11_LH": [
+    70,
+    130,
+    177
+  ],
+  "SomMotA_12_LH": [
+    70,
+    130,
+    178
+  ],
+  "SomMotA_13_LH": [
+    70,
+    130,
+    179
+  ],
+  "SomMotA_14_LH": [
+    70,
+    130,
+    181
+  ],
+  "SomMotA_15_LH": [
+    70,
+    130,
+    182
+  ],
+  "SomMotA_16_LH": [
+    70,
+    130,
+    183
+  ],
+  "SomMotA_17_LH": [
+    70,
+    130,
+    184
+  ],
+  "SomMotA_18_LH": [
+    70,
+    130,
+    185
+  ],
+  "SomMotA_19_LH": [
+    70,
+    130,
+    186
+  ],
+  "SomMotA_20_LH": [
+    70,
+    130,
+    187
+  ],
+  "SomMotA_21_LH": [
+    70,
+    131,
+    180
+  ],
+  "SomMotA_22_LH": [
+    70,
+    131,
+    181
+  ],
+  "SomMotA_23_LH": [
+    70,
+    131,
+    182
+  ],
+  "SomMotA_24_LH": [
+    70,
+    131,
+    183
+  ],
+  "SomMotA_25_LH": [
+    70,
+    131,
+    184
+  ],
+  "SomMotA_26_LH": [
+    70,
+    131,
+    185
+  ],
+  "SomMotA_27_LH": [
+    70,
+    131,
+    186
+  ],
+  "SomMotA_28_LH": [
+    70,
+    131,
+    187
+  ],
+  "SomMotA_29_LH": [
+    70,
+    132,
+    180
+  ],
+  "SomMotB_Cent_1_LH": [
+    42,
+    204,
+    162
+  ],
+  "SomMotB_Cent_2_LH": [
+    42,
+    204,
+    163
+  ],
+  "SomMotB_Cent_3_LH": [
+    42,
+    204,
+    165
+  ],
+  "SomMotB_Cent_4_LH": [
+    42,
+    204,
+    166
+  ],
+  "SomMotB_Cent_5_LH": [
+    42,
+    204,
+    167
+  ],
+  "SomMotB_Cent_6_LH": [
+    42,
+    204,
+    168
+  ],
+  "SomMotB_Cent_7_LH": [
+    42,
+    204,
+    169
+  ],
+  "SomMotB_Cent_8_LH": [
+    42,
+    204,
+    170
+  ],
+  "SomMotB_S2_1_LH": [
+    42,
+    204,
+    164
+  ],
+  "SomMotB_S2_2_LH": [
+    42,
+    204,
+    171
+  ],
+  "SomMotB_S2_3_LH": [
+    42,
+    204,
+    172
+  ],
+  "SomMotB_S2_4_LH": [
+    42,
+    205,
+    165
+  ],
+  "SomMotB_S2_5_LH": [
+    42,
+    205,
+    166
+  ],
+  "SomMotB_S2_6_LH": [
+    42,
+    205,
+    167
+  ],
+  "SomMotB_S2_7_LH": [
+    42,
+    205,
+    168
+  ],
+  "SomMotB_S2_8_LH": [
+    42,
+    205,
+    169
+  ],
+  "SomMotB_Ins_1_LH": [
+    42,
+    205,
+    170
+  ],
+  "SomMotB_Aud_1_LH": [
+    43,
+    204,
+    162
+  ],
+  "SomMotB_Aud_2_LH": [
+    43,
+    204,
+    163
+  ],
+  "SomMotB_Aud_3_LH": [
+    43,
+    204,
+    165
+  ],
+  "SomMotB_Aud_4_LH": [
+    43,
+    204,
+    166
+  ],
+  "SomMotB_Aud_5_LH": [
+    43,
+    204,
+    167
+  ],
+  "SomMotB_Aud_6_LH": [
+    43,
+    204,
+    168
+  ],
+  "SomMotB_Aud_7_LH": [
+    43,
+    204,
+    169
+  ],
+  "DorsAttnA_TempOcc_1_LH": [
+    74,
+    155,
+    59
+  ],
+  "DorsAttnA_TempOcc_2_LH": [
+    74,
+    155,
+    61
+  ],
+  "DorsAttnA_TempOcc_3_LH": [
+    74,
+    155,
+    62
+  ],
+  "DorsAttnA_TempOcc_4_LH": [
+    74,
+    155,
+    63
+  ],
+  "DorsAttnA_TempOcc_5_LH": [
+    74,
+    155,
+    64
+  ],
+  "DorsAttnA_TempOcc_6_LH": [
+    74,
+    155,
+    65
+  ],
+  "DorsAttnA_ParOcc_1_LH": [
+    74,
+    155,
+    66
+  ],
+  "DorsAttnA_ParOcc_2_LH": [
+    74,
+    155,
+    67
+  ],
+  "DorsAttnA_ParOcc_3_LH": [
+    74,
+    155,
+    68
+  ],
+  "DorsAttnA_ParOcc_4_LH": [
+    74,
+    156,
+    61
+  ],
+  "DorsAttnA_SPL_1_LH": [
+    74,
+    156,
+    56
+  ],
+  "DorsAttnA_SPL_2_LH": [
+    74,
+    156,
+    57
+  ],
+  "DorsAttnA_SPL_3_LH": [
+    74,
+    156,
+    58
+  ],
+  "DorsAttnA_SPL_4_LH": [
+    74,
+    156,
+    59
+  ],
+  "DorsAttnA_SPL_5_LH": [
+    74,
+    156,
+    62
+  ],
+  "DorsAttnA_SPL_6_LH": [
+    74,
+    156,
+    63
+  ],
+  "DorsAttnA_SPL_7_LH": [
+    74,
+    156,
+    64
+  ],
+  "DorsAttnA_SPL_8_LH": [
+    74,
+    156,
+    65
+  ],
+  "DorsAttnA_SPL_9_LH": [
+    74,
+    156,
+    66
+  ],
+  "DorsAttnA_SPL_10_LH": [
+    74,
+    156,
+    67
+  ],
+  "DorsAttnA_SPL_11_LH": [
+    74,
+    157,
+    60
+  ],
+  "DorsAttnB_PostC_1_LH": [
+    0,
+    118,
+    12
+  ],
+  "DorsAttnB_PostC_2_LH": [
+    0,
+    118,
+    13
+  ],
+  "DorsAttnB_PostC_3_LH": [
+    0,
+    118,
+    14
+  ],
+  "DorsAttnB_PostC_4_LH": [
+    0,
+    118,
+    16
+  ],
+  "DorsAttnB_PostC_5_LH": [
+    0,
+    118,
+    17
+  ],
+  "DorsAttnB_PostC_6_LH": [
+    0,
+    118,
+    18
+  ],
+  "DorsAttnB_PostC_7_LH": [
+    0,
+    118,
+    19
+  ],
+  "DorsAttnB_PostC_8_LH": [
+    0,
+    118,
+    20
+  ],
+  "DorsAttnB_PostC_9_LH": [
+    0,
+    118,
+    21
+  ],
+  "DorsAttnB_PostC_10_LH": [
+    0,
+    118,
+    22
+  ],
+  "DorsAttnB_FEF_1_LH": [
+    0,
+    119,
+    15
+  ],
+  "DorsAttnB_FEF_2_LH": [
+    0,
+    119,
+    16
+  ],
+  "DorsAttnB_FEF_3_LH": [
+    0,
+    119,
+    17
+  ],
+  "DorsAttnB_FEF_4_LH": [
+    0,
+    119,
+    18
+  ],
+  "DorsAttnB_PrCv_1_LH": [
+    0,
+    119,
+    19
+  ],
+  "SalVentAttnA_ParOper_1_LH": [
+    196,
+    58,
+    249
+  ],
+  "SalVentAttnA_ParOper_2_LH": [
+    196,
+    58,
+    251
+  ],
+  "SalVentAttnA_ParOper_3_LH": [
+    196,
+    58,
+    252
+  ],
+  "SalVentAttnA_ParOper_4_LH": [
+    196,
+    58,
+    253
+  ],
+  "SalVentAttnA_ParOper_5_LH": [
+    196,
+    58,
+    254
+  ],
+  "SalVentAttnA_FrOper_1_LH": [
+    196,
+    58,
+    255
+  ],
+  "SalVentAttnA_FrOper_2_LH": [
+    193,
+    51,
+    250
+  ],
+  "SalVentAttnA_FrOper_3_LH": [
+    193,
+    51,
+    251
+  ],
+  "SalVentAttnA_FrOper_4_LH": [
+    193,
+    52,
+    244
+  ],
+  "SalVentAttnA_Ins_1_LH": [
+    196,
+    59,
+    249
+  ],
+  "SalVentAttnA_Ins_2_LH": [
+    196,
+    59,
+    251
+  ],
+  "SalVentAttnA_Ins_3_LH": [
+    196,
+    59,
+    252
+  ],
+  "SalVentAttnA_Ins_4_LH": [
+    196,
+    59,
+    253
+  ],
+  "SalVentAttnA_Ins_5_LH": [
+    196,
+    59,
+    254
+  ],
+  "SalVentAttnA_Ins_6_LH": [
+    196,
+    59,
+    255
+  ],
+  "SalVentAttnA_ParMed_1_LH": [
+    196,
+    59,
+    250
+  ],
+  "SalVentAttnA_ParMed_2_LH": [
+    193,
+    52,
+    249
+  ],
+  "SalVentAttnA_ParMed_3_LH": [
+    193,
+    52,
+    250
+  ],
+  "SalVentAttnA_ParMed_4_LH": [
+    193,
+    52,
+    251
+  ],
+  "SalVentAttnA_ParMed_5_LH": [
+    193,
+    53,
+    244
+  ],
+  "SalVentAttnA_ParMed_6_LH": [
+    193,
+    53,
+    245
+  ],
+  "SalVentAttnA_FrMed_1_LH": [
+    197,
+    58,
+    249
+  ],
+  "SalVentAttnA_FrMed_2_LH": [
+    197,
+    58,
+    251
+  ],
+  "SalVentAttnA_FrMed_3_LH": [
+    197,
+    58,
+    252
+  ],
+  "SalVentAttnA_FrMed_4_LH": [
+    197,
+    58,
+    253
+  ],
+  "SalVentAttnA_FrMed_5_LH": [
+    197,
+    58,
+    254
+  ],
+  "SalVentAttnB_PFCd_1_LH": [
+    255,
+    152,
+    215
+  ],
+  "SalVentAttnB_PFCl_1_LH": [
+    255,
+    153,
+    214
+  ],
+  "SalVentAttnB_PFCl_2_LH": [
+    255,
+    153,
+    215
+  ],
+  "SalVentAttnB_PFCl_3_LH": [
+    255,
+    153,
+    216
+  ],
+  "SalVentAttnB_PFCl_4_LH": [
+    255,
+    153,
+    217
+  ],
+  "SalVentAttnB_Ins_1_LH": [
+    255,
+    153,
+    218
+  ],
+  "SalVentAttnB_Ins_2_LH": [
+    255,
+    153,
+    219
+  ],
+  "SalVentAttnB_Ins_3_LH": [
+    255,
+    153,
+    220
+  ],
+  "SalVentAttnB_Ins_4_LH": [
+    255,
+    153,
+    221
+  ],
+  "SalVentAttnB_PFCmp_1_LH": [
+    255,
+    151,
+    214
+  ],
+  "SalVentAttnB_PFCmp_2_LH": [
+    255,
+    151,
+    215
+  ],
+  "SalVentAttnB_PFCmp_3_LH": [
+    255,
+    151,
+    216
+  ],
+  "LimbicB_OFC_1_LH": [
+    122,
+    135,
+    47
+  ],
+  "LimbicB_OFC_2_LH": [
+    122,
+    135,
+    48
+  ],
+  "LimbicB_OFC_3_LH": [
+    122,
+    135,
+    49
+  ],
+  "LimbicB_OFC_4_LH": [
+    122,
+    135,
+    51
+  ],
+  "LimbicB_OFC_5_LH": [
+    122,
+    135,
+    52
+  ],
+  "LimbicB_OFC_6_LH": [
+    122,
+    135,
+    53
+  ],
+  "LimbicB_OFC_7_LH": [
+    122,
+    135,
+    54
+  ],
+  "LimbicB_OFC_8_LH": [
+    122,
+    135,
+    55
+  ],
+  "LimbicB_OFC_9_LH": [
+    122,
+    135,
+    56
+  ],
+  "LimbicB_OFC_10_LH": [
+    122,
+    135,
+    57
+  ],
+  "LimbicA_TempPole_1_LH": [
+    220,
+    248,
+    160
+  ],
+  "LimbicA_TempPole_2_LH": [
+    220,
+    248,
+    161
+  ],
+  "LimbicA_TempPole_3_LH": [
+    220,
+    248,
+    162
+  ],
+  "LimbicA_TempPole_4_LH": [
+    220,
+    248,
+    163
+  ],
+  "LimbicA_TempPole_5_LH": [
+    220,
+    248,
+    165
+  ],
+  "LimbicA_TempPole_6_LH": [
+    220,
+    248,
+    166
+  ],
+  "LimbicA_TempPole_7_LH": [
+    220,
+    248,
+    167
+  ],
+  "LimbicA_TempPole_8_LH": [
+    220,
+    248,
+    168
+  ],
+  "LimbicA_TempPole_9_LH": [
+    220,
+    248,
+    169
+  ],
+  "LimbicA_TempPole_10_LH": [
+    220,
+    248,
+    170
+  ],
+  "LimbicA_TempPole_11_LH": [
+    220,
+    248,
+    171
+  ],
+  "LimbicA_TempPole_12_LH": [
+    220,
+    249,
+    164
+  ],
+  "ContA_Temp_1_LH": [
+    230,
+    148,
+    35
+  ],
+  "ContA_Temp_2_LH": [
+    230,
+    148,
+    36
+  ],
+  "ContA_IPS_1_LH": [
+    230,
+    148,
+    34
+  ],
+  "ContA_IPS_2_LH": [
+    230,
+    148,
+    37
+  ],
+  "ContA_IPS_3_LH": [
+    230,
+    148,
+    38
+  ],
+  "ContA_IPS_4_LH": [
+    230,
+    148,
+    39
+  ],
+  "ContA_IPS_5_LH": [
+    230,
+    148,
+    40
+  ],
+  "ContA_IPS_6_LH": [
+    230,
+    148,
+    41
+  ],
+  "ContA_PFCd_1_LH": [
+    230,
+    149,
+    35
+  ],
+  "ContA_PFCd_2_LH": [
+    230,
+    149,
+    36
+  ],
+  "ContA_PFCl_1_LH": [
+    230,
+    149,
+    34
+  ],
+  "ContA_PFCl_2_LH": [
+    230,
+    149,
+    37
+  ],
+  "ContA_PFCl_3_LH": [
+    230,
+    149,
+    38
+  ],
+  "ContA_PFCl_4_LH": [
+    230,
+    149,
+    39
+  ],
+  "ContA_PFCl_5_LH": [
+    230,
+    149,
+    40
+  ],
+  "ContA_PFCl_6_LH": [
+    230,
+    149,
+    41
+  ],
+  "ContA_PFClv_1_LH": [
+    231,
+    148,
+    35
+  ],
+  "ContA_PFClv_2_LH": [
+    231,
+    148,
+    36
+  ],
+  "ContA_Cingm_1_LH": [
+    231,
+    148,
+    37
+  ],
+  "ContB_Temp_1_LH": [
+    135,
+    50,
+    75
+  ],
+  "ContB_Temp_2_LH": [
+    135,
+    50,
+    76
+  ],
+  "ContB_IPL_1_LH": [
+    135,
+    50,
+    74
+  ],
+  "ContB_IPL_2_LH": [
+    135,
+    50,
+    77
+  ],
+  "ContB_IPL_3_LH": [
+    135,
+    50,
+    78
+  ],
+  "ContB_IPL_4_LH": [
+    135,
+    50,
+    79
+  ],
+  "ContB_IPL_5_LH": [
+    135,
+    50,
+    80
+  ],
+  "ContB_PFCd_1_LH": [
+    135,
+    51,
+    75
+  ],
+  "ContB_PFCl_1_LH": [
+    135,
+    51,
+    76
+  ],
+  "ContB_PFCl_2_LH": [
+    135,
+    51,
+    77
+  ],
+  "ContB_PFClv_1_LH": [
+    136,
+    50,
+    75
+  ],
+  "ContB_PFClv_2_LH": [
+    136,
+    50,
+    76
+  ],
+  "ContB_PFClv_3_LH": [
+    136,
+    50,
+    77
+  ],
+  "ContB_PFCmp_1_LH": [
+    136,
+    50,
+    78
+  ],
+  "ContC_pCun_1_LH": [
+    119,
+    140,
+    175
+  ],
+  "ContC_pCun_2_LH": [
+    119,
+    140,
+    177
+  ],
+  "ContC_pCun_3_LH": [
+    119,
+    140,
+    178
+  ],
+  "ContC_pCun_4_LH": [
+    119,
+    140,
+    179
+  ],
+  "ContC_pCun_5_LH": [
+    119,
+    140,
+    180
+  ],
+  "ContC_pCun_6_LH": [
+    119,
+    140,
+    181
+  ],
+  "ContC_Cingp_1_LH": [
+    119,
+    140,
+    182
+  ],
+  "ContC_Cingp_2_LH": [
+    119,
+    140,
+    183
+  ],
+  "DefaultA_IPL_1_LH": [
+    255,
+    255,
+    1
+  ],
+  "DefaultA_IPL_2_LH": [
+    255,
+    255,
+    2
+  ],
+  "DefaultA_IPL_3_LH": [
+    255,
+    255,
+    3
+  ],
+  "DefaultA_IPL_4_LH": [
+    255,
+    255,
+    4
+  ],
+  "DefaultA_PFCd_1_LH": [
+    255,
+    255,
+    5
+  ],
+  "DefaultA_PFCd_2_LH": [
+    255,
+    255,
+    6
+  ],
+  "DefaultA_PFCd_3_LH": [
+    255,
+    255,
+    7
+  ],
+  "DefaultA_pCunPCC_1_LH": [
+    255,
+    254,
+    1
+  ],
+  "DefaultA_pCunPCC_2_LH": [
+    255,
+    254,
+    2
+  ],
+  "DefaultA_pCunPCC_3_LH": [
+    255,
+    254,
+    3
+  ],
+  "DefaultA_pCunPCC_4_LH": [
+    255,
+    254,
+    4
+  ],
+  "DefaultA_pCunPCC_5_LH": [
+    255,
+    254,
+    5
+  ],
+  "DefaultA_pCunPCC_6_LH": [
+    255,
+    254,
+    6
+  ],
+  "DefaultA_pCunPCC_7_LH": [
+    255,
+    254,
+    7
+  ],
+  "DefaultA_pCunPCC_8_LH": [
+    255,
+    255,
+    0
+  ],
+  "DefaultA_pCunPCC_9_LH": [
+    252,
+    249,
+    0
+  ],
+  "DefaultA_pCunPCC_10_LH": [
+    252,
+    250,
+    0
+  ],
+  "DefaultA_pCunPCC_11_LH": [
+    252,
+    251,
+    0
+  ],
+  "DefaultA_pCunPCC_12_LH": [
+    252,
+    252,
+    0
+  ],
+  "DefaultA_PFCm_1_LH": [
+    254,
+    255,
+    1
+  ],
+  "DefaultA_PFCm_2_LH": [
+    254,
+    255,
+    2
+  ],
+  "DefaultA_PFCm_3_LH": [
+    254,
+    255,
+    3
+  ],
+  "DefaultA_PFCm_4_LH": [
+    254,
+    255,
+    4
+  ],
+  "DefaultA_PFCm_5_LH": [
+    254,
+    255,
+    5
+  ],
+  "DefaultA_PFCm_6_LH": [
+    254,
+    255,
+    6
+  ],
+  "DefaultA_PFCm_7_LH": [
+    254,
+    255,
+    7
+  ],
+  "DefaultA_PFCm_8_LH": [
+    251,
+    249,
+    0
+  ],
+  "DefaultB_Temp_1_LH": [
+    205,
+    62,
+    76
+  ],
+  "DefaultB_Temp_2_LH": [
+    205,
+    62,
+    77
+  ],
+  "DefaultB_Temp_3_LH": [
+    205,
+    62,
+    79
+  ],
+  "DefaultB_Temp_4_LH": [
+    205,
+    62,
+    80
+  ],
+  "DefaultB_Temp_5_LH": [
+    205,
+    62,
+    81
+  ],
+  "DefaultB_Temp_6_LH": [
+    205,
+    62,
+    82
+  ],
+  "DefaultB_Temp_7_LH": [
+    205,
+    62,
+    83
+  ],
+  "DefaultB_IPL_1_LH": [
+    205,
+    62,
+    84
+  ],
+  "DefaultB_IPL_2_LH": [
+    205,
+    62,
+    85
+  ],
+  "DefaultB_IPL_3_LH": [
+    205,
+    62,
+    86
+  ],
+  "DefaultB_IPL_4_LH": [
+    205,
+    63,
+    79
+  ],
+  "DefaultB_PFCd_1_LH": [
+    205,
+    63,
+    76
+  ],
+  "DefaultB_PFCd_2_LH": [
+    205,
+    63,
+    77
+  ],
+  "DefaultB_PFCd_3_LH": [
+    205,
+    63,
+    80
+  ],
+  "DefaultB_PFCd_4_LH": [
+    205,
+    63,
+    81
+  ],
+  "DefaultB_PFCd_5_LH": [
+    205,
+    63,
+    82
+  ],
+  "DefaultB_PFCd_6_LH": [
+    205,
+    63,
+    83
+  ],
+  "DefaultB_PFCd_7_LH": [
+    205,
+    63,
+    84
+  ],
+  "DefaultB_PFCl_1_LH": [
+    205,
+    63,
+    85
+  ],
+  "DefaultB_PFCl_2_LH": [
+    205,
+    63,
+    86
+  ],
+  "DefaultB_PFCv_1_LH": [
+    206,
+    62,
+    76
+  ],
+  "DefaultB_PFCv_2_LH": [
+    206,
+    62,
+    77
+  ],
+  "DefaultB_PFCv_3_LH": [
+    206,
+    62,
+    79
+  ],
+  "DefaultB_PFCv_4_LH": [
+    206,
+    62,
+    80
+  ],
+  "DefaultB_PFCv_5_LH": [
+    206,
+    62,
+    81
+  ],
+  "DefaultB_PFCv_6_LH": [
+    206,
+    62,
+    82
+  ],
+  "DefaultB_PFCv_7_LH": [
+    206,
+    62,
+    83
+  ],
+  "DefaultC_IPL_1_LH": [
+    0,
+    0,
+    131
+  ],
+  "DefaultC_IPL_2_LH": [
+    0,
+    0,
+    132
+  ],
+  "DefaultC_Rsp_1_LH": [
+    0,
+    0,
+    133
+  ],
+  "DefaultC_Rsp_2_LH": [
+    0,
+    0,
+    134
+  ],
+  "DefaultC_Rsp_3_LH": [
+    0,
+    0,
+    135
+  ],
+  "DefaultC_Rsp_4_LH": [
+    0,
+    0,
+    136
+  ],
+  "DefaultC_PHC_1_LH": [
+    0,
+    1,
+    129
+  ],
+  "DefaultC_PHC_2_LH": [
+    0,
+    1,
+    131
+  ],
+  "DefaultC_PHC_3_LH": [
+    0,
+    1,
+    132
+  ],
+  "DefaultC_PHC_4_LH": [
+    0,
+    1,
+    133
+  ],
+  "DefaultC_PHC_5_LH": [
+    0,
+    1,
+    134
+  ],
+  "TempPar_1_LH": [
+    12,
+    48,
+    253
+  ],
+  "TempPar_2_LH": [
+    12,
+    48,
+    254
+  ],
+  "TempPar_3_LH": [
+    9,
+    41,
+    249
+  ],
+  "TempPar_4_LH": [
+    9,
+    41,
+    250
+  ],
+  "TempPar_5_LH": [
+    9,
+    41,
+    251
+  ],
+  "TempPar_6_LH": [
+    9,
+    41,
+    252
+  ],
+  "TempPar_7_LH": [
+    9,
+    41,
+    253
+  ],
+  "TempPar_8_LH": [
+    9,
+    41,
+    254
+  ],
+  "VisCent_Striate_1_RH": [
+    120,
+    19,
+    135
+  ],
+  "VisCent_Striate_2_RH": [
+    120,
+    19,
+    136
+  ],
+  "VisCent_Striate_3_RH": [
+    120,
+    19,
+    137
+  ],
+  "VisCent_ExStr_1_RH": [
+    120,
+    19,
+    128
+  ],
+  "VisCent_ExStr_2_RH": [
+    120,
+    19,
+    129
+  ],
+  "VisCent_ExStr_3_RH": [
+    120,
+    19,
+    130
+  ],
+  "VisCent_ExStr_4_RH": [
+    120,
+    19,
+    131
+  ],
+  "VisCent_ExStr_5_RH": [
+    120,
+    19,
+    132
+  ],
+  "VisCent_ExStr_6_RH": [
+    120,
+    19,
+    133
+  ],
+  "VisCent_ExStr_7_RH": [
+    120,
+    19,
+    134
+  ],
+  "VisCent_ExStr_8_RH": [
+    120,
+    19,
+    138
+  ],
+  "VisCent_ExStr_9_RH": [
+    120,
+    19,
+    139
+  ],
+  "VisCent_ExStr_10_RH": [
+    120,
+    19,
+    140
+  ],
+  "VisCent_ExStr_11_RH": [
+    120,
+    19,
+    141
+  ],
+  "VisCent_ExStr_12_RH": [
+    120,
+    19,
+    142
+  ],
+  "VisCent_ExStr_13_RH": [
+    120,
+    20,
+    135
+  ],
+  "VisCent_ExStr_14_RH": [
+    120,
+    20,
+    136
+  ],
+  "VisCent_ExStr_15_RH": [
+    120,
+    20,
+    137
+  ],
+  "VisCent_ExStr_16_RH": [
+    120,
+    20,
+    138
+  ],
+  "VisCent_ExStr_17_RH": [
+    120,
+    20,
+    139
+  ],
+  "VisCent_ExStr_18_RH": [
+    120,
+    20,
+    140
+  ],
+  "VisPeri_StriCal_1_RH": [
+    255,
+    1,
+    2
+  ],
+  "VisPeri_StriCal_2_RH": [
+    255,
+    1,
+    3
+  ],
+  "VisPeri_StriCal_3_RH": [
+    255,
+    1,
+    4
+  ],
+  "VisPeri_StriCal_4_RH": [
+    255,
+    1,
+    5
+  ],
+  "VisPeri_ExStrInf_1_RH": [
+    254,
+    0,
+    1
+  ],
+  "VisPeri_ExStrInf_2_RH": [
+    254,
+    0,
+    2
+  ],
+  "VisPeri_ExStrInf_3_RH": [
+    254,
+    0,
+    3
+  ],
+  "VisPeri_ExStrInf_4_RH": [
+    254,
+    0,
+    4
+  ],
+  "VisPeri_ExStrInf_5_RH": [
+    254,
+    0,
+    5
+  ],
+  "VisPeri_ExStrSup_1_RH": [
+    254,
+    0,
+    0
+  ],
+  "VisPeri_ExStrSup_2_RH": [
+    254,
+    0,
+    6
+  ],
+  "VisPeri_ExStrSup_3_RH": [
+    254,
+    0,
+    7
+  ],
+  "VisPeri_ExStrSup_4_RH": [
+    254,
+    0,
+    8
+  ],
+  "VisPeri_ExStrSup_5_RH": [
+    254,
+    1,
+    1
+  ],
+  "VisPeri_ExStrSup_6_RH": [
+    254,
+    1,
+    2
+  ],
+  "SomMotA_1_RH": [
+    70,
+    130,
+    177
+  ],
+  "SomMotA_2_RH": [
+    70,
+    130,
+    178
+  ],
+  "SomMotA_3_RH": [
+    70,
+    130,
+    179
+  ],
+  "SomMotA_4_RH": [
+    70,
+    130,
+    180
+  ],
+  "SomMotA_5_RH": [
+    70,
+    130,
+    181
+  ],
+  "SomMotA_6_RH": [
+    70,
+    131,
+    174
+  ],
+  "SomMotA_7_RH": [
+    70,
+    131,
+    175
+  ],
+  "SomMotA_8_RH": [
+    70,
+    131,
+    176
+  ],
+  "SomMotA_9_RH": [
+    70,
+    131,
+    177
+  ],
+  "SomMotA_10_RH": [
+    70,
+    131,
+    178
+  ],
+  "SomMotA_11_RH": [
+    70,
+    131,
+    179
+  ],
+  "SomMotA_12_RH": [
+    70,
+    131,
+    180
+  ],
+  "SomMotA_13_RH": [
+    70,
+    131,
+    182
+  ],
+  "SomMotA_14_RH": [
+    70,
+    131,
+    183
+  ],
+  "SomMotA_15_RH": [
+    70,
+    131,
+    184
+  ],
+  "SomMotA_16_RH": [
+    70,
+    131,
+    185
+  ],
+  "SomMotA_17_RH": [
+    70,
+    131,
+    186
+  ],
+  "SomMotA_18_RH": [
+    70,
+    131,
+    187
+  ],
+  "SomMotA_19_RH": [
+    70,
+    131,
+    188
+  ],
+  "SomMotA_20_RH": [
+    70,
+    132,
+    181
+  ],
+  "SomMotA_21_RH": [
+    70,
+    132,
+    182
+  ],
+  "SomMotA_22_RH": [
+    70,
+    132,
+    183
+  ],
+  "SomMotA_23_RH": [
+    70,
+    132,
+    184
+  ],
+  "SomMotA_24_RH": [
+    70,
+    132,
+    185
+  ],
+  "SomMotA_25_RH": [
+    70,
+    132,
+    186
+  ],
+  "SomMotA_26_RH": [
+    70,
+    132,
+    187
+  ],
+  "SomMotA_27_RH": [
+    70,
+    132,
+    188
+  ],
+  "SomMotB_Cent_1_RH": [
+    43,
+    204,
+    164
+  ],
+  "SomMotB_Cent_2_RH": [
+    43,
+    204,
+    166
+  ],
+  "SomMotB_Cent_3_RH": [
+    43,
+    204,
+    167
+  ],
+  "SomMotB_Cent_4_RH": [
+    43,
+    204,
+    168
+  ],
+  "SomMotB_Cent_5_RH": [
+    43,
+    204,
+    169
+  ],
+  "SomMotB_Cent_6_RH": [
+    43,
+    204,
+    170
+  ],
+  "SomMotB_S2_1_RH": [
+    43,
+    205,
+    162
+  ],
+  "SomMotB_S2_2_RH": [
+    43,
+    205,
+    163
+  ],
+  "SomMotB_S2_3_RH": [
+    43,
+    205,
+    165
+  ],
+  "SomMotB_S2_4_RH": [
+    43,
+    205,
+    166
+  ],
+  "SomMotB_S2_5_RH": [
+    43,
+    205,
+    167
+  ],
+  "SomMotB_S2_6_RH": [
+    43,
+    205,
+    168
+  ],
+  "SomMotB_S2_7_RH": [
+    43,
+    205,
+    169
+  ],
+  "SomMotB_S2_8_RH": [
+    43,
+    205,
+    170
+  ],
+  "SomMotB_Ins_1_RH": [
+    43,
+    205,
+    171
+  ],
+  "SomMotB_Aud_1_RH": [
+    42,
+    204,
+    164
+  ],
+  "SomMotB_Aud_2_RH": [
+    42,
+    204,
+    165
+  ],
+  "SomMotB_Aud_3_RH": [
+    42,
+    204,
+    166
+  ],
+  "SomMotB_Aud_4_RH": [
+    42,
+    204,
+    167
+  ],
+  "DorsAttnA_TempOcc_1_RH": [
+    74,
+    156,
+    62
+  ],
+  "DorsAttnA_TempOcc_2_RH": [
+    74,
+    156,
+    63
+  ],
+  "DorsAttnA_TempOcc_3_RH": [
+    74,
+    156,
+    64
+  ],
+  "DorsAttnA_ParOcc_1_RH": [
+    75,
+    155,
+    61
+  ],
+  "DorsAttnA_ParOcc_2_RH": [
+    75,
+    155,
+    62
+  ],
+  "DorsAttnA_ParOcc_3_RH": [
+    75,
+    155,
+    63
+  ],
+  "DorsAttnA_ParOcc_4_RH": [
+    75,
+    155,
+    64
+  ],
+  "DorsAttnA_SPL_1_RH": [
+    75,
+    155,
+    57
+  ],
+  "DorsAttnA_SPL_2_RH": [
+    75,
+    155,
+    58
+  ],
+  "DorsAttnA_SPL_3_RH": [
+    75,
+    155,
+    59
+  ],
+  "DorsAttnA_SPL_4_RH": [
+    75,
+    155,
+    60
+  ],
+  "DorsAttnA_SPL_5_RH": [
+    75,
+    155,
+    65
+  ],
+  "DorsAttnA_SPL_6_RH": [
+    75,
+    155,
+    66
+  ],
+  "DorsAttnA_SPL_7_RH": [
+    75,
+    155,
+    67
+  ],
+  "DorsAttnA_SPL_8_RH": [
+    75,
+    155,
+    68
+  ],
+  "DorsAttnA_SPL_9_RH": [
+    75,
+    156,
+    61
+  ],
+  "DorsAttnA_SPL_10_RH": [
+    75,
+    156,
+    62
+  ],
+  "DorsAttnA_SPL_11_RH": [
+    75,
+    156,
+    63
+  ],
+  "DorsAttnA_SPL_12_RH": [
+    75,
+    156,
+    64
+  ],
+  "DorsAttnB_TempOcc_1_RH": [
+    1,
+    118,
+    15
+  ],
+  "DorsAttnB_PostC_1_RH": [
+    1,
+    118,
+    11
+  ],
+  "DorsAttnB_PostC_2_RH": [
+    1,
+    118,
+    12
+  ],
+  "DorsAttnB_PostC_3_RH": [
+    1,
+    118,
+    13
+  ],
+  "DorsAttnB_PostC_4_RH": [
+    1,
+    118,
+    14
+  ],
+  "DorsAttnB_PostC_5_RH": [
+    1,
+    118,
+    16
+  ],
+  "DorsAttnB_PostC_6_RH": [
+    1,
+    118,
+    17
+  ],
+  "DorsAttnB_PostC_7_RH": [
+    1,
+    118,
+    18
+  ],
+  "DorsAttnB_PostC_8_RH": [
+    1,
+    118,
+    19
+  ],
+  "DorsAttnB_PostC_9_RH": [
+    1,
+    118,
+    20
+  ],
+  "DorsAttnB_PostC_10_RH": [
+    1,
+    118,
+    21
+  ],
+  "DorsAttnB_PostC_11_RH": [
+    1,
+    118,
+    22
+  ],
+  "DorsAttnB_PostC_12_RH": [
+    1,
+    119,
+    15
+  ],
+  "DorsAttnB_FEF_1_RH": [
+    1,
+    119,
+    16
+  ],
+  "DorsAttnB_FEF_2_RH": [
+    1,
+    119,
+    17
+  ],
+  "DorsAttnB_FEF_3_RH": [
+    1,
+    119,
+    18
+  ],
+  "DorsAttnB_FEF_4_RH": [
+    1,
+    119,
+    19
+  ],
+  "DorsAttnB_PrCv_1_RH": [
+    1,
+    119,
+    20
+  ],
+  "SalVentAttnA_ParOper_1_RH": [
+    196,
+    58,
+    248
+  ],
+  "SalVentAttnA_ParOper_2_RH": [
+    196,
+    58,
+    250
+  ],
+  "SalVentAttnA_ParOper_3_RH": [
+    196,
+    58,
+    251
+  ],
+  "SalVentAttnA_ParOper_4_RH": [
+    196,
+    58,
+    252
+  ],
+  "SalVentAttnA_ParOper_5_RH": [
+    196,
+    58,
+    253
+  ],
+  "SalVentAttnA_PrC_1_RH": [
+    196,
+    57,
+    251
+  ],
+  "SalVentAttnA_FrOper_1_RH": [
+    196,
+    57,
+    248
+  ],
+  "SalVentAttnA_FrOper_2_RH": [
+    196,
+    57,
+    250
+  ],
+  "SalVentAttnA_FrOper_3_RH": [
+    196,
+    57,
+    252
+  ],
+  "SalVentAttnA_FrOper_4_RH": [
+    196,
+    57,
+    253
+  ],
+  "SalVentAttnA_FrOper_5_RH": [
+    196,
+    57,
+    254
+  ],
+  "SalVentAttnA_Ins_1_RH": [
+    195,
+    58,
+    249
+  ],
+  "SalVentAttnA_Ins_2_RH": [
+    195,
+    58,
+    251
+  ],
+  "SalVentAttnA_Ins_3_RH": [
+    195,
+    58,
+    252
+  ],
+  "SalVentAttnA_Ins_4_RH": [
+    195,
+    58,
+    253
+  ],
+  "SalVentAttnA_Ins_5_RH": [
+    195,
+    58,
+    254
+  ],
+  "SalVentAttnA_Ins_6_RH": [
+    195,
+    58,
+    255
+  ],
+  "SalVentAttnA_ParMed_1_RH": [
+    195,
+    58,
+    248
+  ],
+  "SalVentAttnA_ParMed_2_RH": [
+    195,
+    58,
+    250
+  ],
+  "SalVentAttnA_ParMed_3_RH": [
+    192,
+    51,
+    249
+  ],
+  "SalVentAttnA_ParMed_4_RH": [
+    192,
+    52,
+    242
+  ],
+  "SalVentAttnA_ParMed_5_RH": [
+    192,
+    52,
+    243
+  ],
+  "SalVentAttnA_ParMed_6_RH": [
+    192,
+    52,
+    244
+  ],
+  "SalVentAttnA_FrMed_1_RH": [
+    195,
+    57,
+    248
+  ],
+  "SalVentAttnA_FrMed_2_RH": [
+    195,
+    57,
+    249
+  ],
+  "SalVentAttnA_FrMed_3_RH": [
+    195,
+    57,
+    251
+  ],
+  "SalVentAttnA_FrMed_4_RH": [
+    195,
+    57,
+    252
+  ],
+  "SalVentAttnA_FrMed_5_RH": [
+    195,
+    57,
+    253
+  ],
+  "SalVentAttnA_FrMed_6_RH": [
+    195,
+    57,
+    254
+  ],
+  "SalVentAttnA_FrMed_7_RH": [
+    195,
+    57,
+    255
+  ],
+  "SalVentAttnB_IPL_1_RH": [
+    254,
+    152,
+    214
+  ],
+  "SalVentAttnB_IPL_2_RH": [
+    254,
+    152,
+    215
+  ],
+  "SalVentAttnB_PFCd_1_RH": [
+    254,
+    152,
+    213
+  ],
+  "SalVentAttnB_PFCd_2_RH": [
+    254,
+    152,
+    216
+  ],
+  "SalVentAttnB_PFCl_1_RH": [
+    254,
+    151,
+    214
+  ],
+  "SalVentAttnB_PFCl_2_RH": [
+    254,
+    151,
+    215
+  ],
+  "SalVentAttnB_PFCl_3_RH": [
+    254,
+    151,
+    216
+  ],
+  "SalVentAttnB_PFClv_1_RH": [
+    254,
+    151,
+    213
+  ],
+  "SalVentAttnB_PFClv_2_RH": [
+    254,
+    151,
+    217
+  ],
+  "SalVentAttnB_Ins_1_RH": [
+    254,
+    152,
+    217
+  ],
+  "SalVentAttnB_Ins_2_RH": [
+    254,
+    152,
+    218
+  ],
+  "SalVentAttnB_Ins_3_RH": [
+    254,
+    152,
+    219
+  ],
+  "SalVentAttnB_Ins_4_RH": [
+    254,
+    152,
+    220
+  ],
+  "SalVentAttnB_PFCmp_1_RH": [
+    254,
+    153,
+    214
+  ],
+  "SalVentAttnB_PFCmp_2_RH": [
+    254,
+    153,
+    215
+  ],
+  "SalVentAttnB_PFCmp_3_RH": [
+    254,
+    153,
+    216
+  ],
+  "SalVentAttnB_PFCmp_4_RH": [
+    254,
+    153,
+    217
+  ],
+  "SalVentAttnB_Cinga_1_RH": [
+    255,
+    151,
+    213
+  ],
+  "LimbicB_OFC_1_RH": [
+    122,
+    135,
+    47
+  ],
+  "LimbicB_OFC_2_RH": [
+    122,
+    135,
+    48
+  ],
+  "LimbicB_OFC_3_RH": [
+    122,
+    135,
+    49
+  ],
+  "LimbicB_OFC_4_RH": [
+    122,
+    135,
+    50
+  ],
+  "LimbicB_OFC_5_RH": [
+    122,
+    135,
+    52
+  ],
+  "LimbicB_OFC_6_RH": [
+    122,
+    135,
+    53
+  ],
+  "LimbicB_OFC_7_RH": [
+    122,
+    135,
+    54
+  ],
+  "LimbicB_OFC_8_RH": [
+    122,
+    135,
+    55
+  ],
+  "LimbicB_OFC_9_RH": [
+    122,
+    135,
+    56
+  ],
+  "LimbicB_OFC_10_RH": [
+    122,
+    135,
+    57
+  ],
+  "LimbicB_OFC_11_RH": [
+    122,
+    135,
+    58
+  ],
+  "LimbicA_TempPole_1_RH": [
+    220,
+    248,
+    162
+  ],
+  "LimbicA_TempPole_2_RH": [
+    220,
+    248,
+    163
+  ],
+  "LimbicA_TempPole_3_RH": [
+    220,
+    248,
+    164
+  ],
+  "LimbicA_TempPole_4_RH": [
+    220,
+    248,
+    166
+  ],
+  "LimbicA_TempPole_5_RH": [
+    220,
+    248,
+    167
+  ],
+  "LimbicA_TempPole_6_RH": [
+    220,
+    248,
+    168
+  ],
+  "LimbicA_TempPole_7_RH": [
+    220,
+    248,
+    169
+  ],
+  "LimbicA_TempPole_8_RH": [
+    220,
+    248,
+    170
+  ],
+  "LimbicA_TempPole_9_RH": [
+    220,
+    248,
+    171
+  ],
+  "ContA_IPS_1_RH": [
+    230,
+    147,
+    32
+  ],
+  "ContA_IPS_2_RH": [
+    230,
+    147,
+    33
+  ],
+  "ContA_IPS_3_RH": [
+    230,
+    147,
+    35
+  ],
+  "ContA_IPS_4_RH": [
+    230,
+    147,
+    36
+  ],
+  "ContA_IPS_5_RH": [
+    230,
+    147,
+    37
+  ],
+  "ContA_IPS_6_RH": [
+    230,
+    147,
+    38
+  ],
+  "ContA_IPS_7_RH": [
+    230,
+    147,
+    39
+  ],
+  "ContA_IPS_8_RH": [
+    230,
+    147,
+    40
+  ],
+  "ContA_PFCd_1_RH": [
+    230,
+    147,
+    34
+  ],
+  "ContA_PFCd_2_RH": [
+    230,
+    148,
+    33
+  ],
+  "ContA_PFCl_1_RH": [
+    229,
+    148,
+    32
+  ],
+  "ContA_PFCl_2_RH": [
+    229,
+    148,
+    33
+  ],
+  "ContA_PFCl_3_RH": [
+    229,
+    148,
+    35
+  ],
+  "ContA_PFCl_4_RH": [
+    229,
+    148,
+    36
+  ],
+  "ContA_PFCl_5_RH": [
+    229,
+    148,
+    37
+  ],
+  "ContA_PFCl_6_RH": [
+    229,
+    148,
+    38
+  ],
+  "ContA_PFCl_7_RH": [
+    229,
+    148,
+    39
+  ],
+  "ContA_Cingm_1_RH": [
+    229,
+    148,
+    34
+  ],
+  "ContB_Temp_1_RH": [
+    136,
+    51,
+    76
+  ],
+  "ContB_Temp_2_RH": [
+    136,
+    51,
+    77
+  ],
+  "ContB_Temp_3_RH": [
+    136,
+    51,
+    78
+  ],
+  "ContB_IPL_1_RH": [
+    135,
+    50,
+    72
+  ],
+  "ContB_IPL_2_RH": [
+    135,
+    50,
+    74
+  ],
+  "ContB_IPL_3_RH": [
+    135,
+    50,
+    75
+  ],
+  "ContB_IPL_4_RH": [
+    135,
+    50,
+    76
+  ],
+  "ContB_IPL_5_RH": [
+    135,
+    50,
+    77
+  ],
+  "ContB_PFCld_1_RH": [
+    135,
+    49,
+    72
+  ],
+  "ContB_PFCld_2_RH": [
+    135,
+    49,
+    73
+  ],
+  "ContB_PFCld_3_RH": [
+    135,
+    49,
+    75
+  ],
+  "ContB_PFCld_4_RH": [
+    135,
+    49,
+    76
+  ],
+  "ContB_PFCld_5_RH": [
+    135,
+    49,
+    77
+  ],
+  "ContB_PFCld_6_RH": [
+    135,
+    49,
+    78
+  ],
+  "ContB_PFCld_7_RH": [
+    135,
+    49,
+    79
+  ],
+  "ContB_PFClv_1_RH": [
+    135,
+    49,
+    74
+  ],
+  "ContB_PFClv_2_RH": [
+    135,
+    49,
+    80
+  ],
+  "ContB_PFClv_3_RH": [
+    135,
+    50,
+    73
+  ],
+  "ContB_PFClv_4_RH": [
+    135,
+    50,
+    78
+  ],
+  "ContB_PFClv_5_RH": [
+    135,
+    50,
+    79
+  ],
+  "ContB_PFClv_6_RH": [
+    135,
+    50,
+    80
+  ],
+  "ContB_PFCmp_1_RH": [
+    134,
+    50,
+    75
+  ],
+  "ContC_pCun_1_RH": [
+    119,
+    141,
+    175
+  ],
+  "ContC_pCun_2_RH": [
+    119,
+    141,
+    177
+  ],
+  "ContC_pCun_3_RH": [
+    119,
+    141,
+    178
+  ],
+  "ContC_pCun_4_RH": [
+    119,
+    141,
+    179
+  ],
+  "ContC_pCun_5_RH": [
+    119,
+    141,
+    180
+  ],
+  "ContC_pCun_6_RH": [
+    119,
+    141,
+    181
+  ],
+  "ContC_Cingp_1_RH": [
+    119,
+    141,
+    182
+  ],
+  "ContC_Cingp_2_RH": [
+    119,
+    141,
+    183
+  ],
+  "ContC_Cingp_3_RH": [
+    119,
+    141,
+    184
+  ],
+  "DefaultA_Temp_1_RH": [
+    254,
+    255,
+    2
+  ],
+  "DefaultA_IPL_1_RH": [
+    255,
+    254,
+    2
+  ],
+  "DefaultA_IPL_2_RH": [
+    255,
+    254,
+    3
+  ],
+  "DefaultA_IPL_3_RH": [
+    255,
+    254,
+    4
+  ],
+  "DefaultA_IPL_4_RH": [
+    255,
+    254,
+    5
+  ],
+  "DefaultA_PFCd_1_RH": [
+    255,
+    255,
+    3
+  ],
+  "DefaultA_PFCd_2_RH": [
+    255,
+    255,
+    4
+  ],
+  "DefaultA_PFCd_3_RH": [
+    255,
+    255,
+    5
+  ],
+  "DefaultA_pCunPCC_1_RH": [
+    255,
+    253,
+    1
+  ],
+  "DefaultA_pCunPCC_2_RH": [
+    255,
+    253,
+    2
+  ],
+  "DefaultA_pCunPCC_3_RH": [
+    255,
+    253,
+    3
+  ],
+  "DefaultA_pCunPCC_4_RH": [
+    255,
+    253,
+    4
+  ],
+  "DefaultA_pCunPCC_5_RH": [
+    255,
+    253,
+    5
+  ],
+  "DefaultA_pCunPCC_6_RH": [
+    255,
+    253,
+    6
+  ],
+  "DefaultA_pCunPCC_7_RH": [
+    255,
+    253,
+    7
+  ],
+  "DefaultA_pCunPCC_8_RH": [
+    255,
+    254,
+    0
+  ],
+  "DefaultA_pCunPCC_9_RH": [
+    255,
+    254,
+    1
+  ],
+  "DefaultA_pCunPCC_10_RH": [
+    255,
+    254,
+    6
+  ],
+  "DefaultA_PFCm_1_RH": [
+    253,
+    255,
+    1
+  ],
+  "DefaultA_PFCm_2_RH": [
+    253,
+    255,
+    2
+  ],
+  "DefaultA_PFCm_3_RH": [
+    253,
+    255,
+    3
+  ],
+  "DefaultA_PFCm_4_RH": [
+    253,
+    255,
+    4
+  ],
+  "DefaultA_PFCm_5_RH": [
+    253,
+    255,
+    5
+  ],
+  "DefaultA_PFCm_6_RH": [
+    253,
+    255,
+    6
+  ],
+  "DefaultA_PFCm_7_RH": [
+    253,
+    255,
+    7
+  ],
+  "DefaultA_PFCm_8_RH": [
+    250,
+    249,
+    0
+  ],
+  "DefaultB_Temp_1_RH": [
+    206,
+    62,
+    80
+  ],
+  "DefaultB_Temp_2_RH": [
+    206,
+    62,
+    81
+  ],
+  "DefaultB_AntTemp_1_RH": [
+    206,
+    63,
+    79
+  ],
+  "DefaultB_AntTemp_2_RH": [
+    206,
+    63,
+    80
+  ],
+  "DefaultB_AntTemp_3_RH": [
+    206,
+    63,
+    81
+  ],
+  "DefaultB_PFCd_1_RH": [
+    206,
+    63,
+    78
+  ],
+  "DefaultB_PFCd_2_RH": [
+    206,
+    63,
+    82
+  ],
+  "DefaultB_PFCd_3_RH": [
+    206,
+    63,
+    83
+  ],
+  "DefaultB_PFCd_4_RH": [
+    206,
+    63,
+    84
+  ],
+  "DefaultB_PFCd_5_RH": [
+    206,
+    63,
+    85
+  ],
+  "DefaultB_PFCd_6_RH": [
+    206,
+    63,
+    86
+  ],
+  "DefaultB_PFCv_1_RH": [
+    205,
+    62,
+    76
+  ],
+  "DefaultB_PFCv_2_RH": [
+    205,
+    62,
+    78
+  ],
+  "DefaultB_PFCv_3_RH": [
+    205,
+    62,
+    79
+  ],
+  "DefaultB_PFCv_4_RH": [
+    205,
+    62,
+    80
+  ],
+  "DefaultB_PFCv_5_RH": [
+    205,
+    62,
+    81
+  ],
+  "DefaultC_IPL_1_RH": [
+    0,
+    1,
+    132
+  ],
+  "DefaultC_IPL_2_RH": [
+    0,
+    1,
+    133
+  ],
+  "DefaultC_IPL_3_RH": [
+    0,
+    1,
+    134
+  ],
+  "DefaultC_Rsp_1_RH": [
+    1,
+    0,
+    131
+  ],
+  "DefaultC_Rsp_2_RH": [
+    1,
+    0,
+    132
+  ],
+  "DefaultC_Rsp_3_RH": [
+    1,
+    0,
+    133
+  ],
+  "DefaultC_PHC_1_RH": [
+    1,
+    0,
+    134
+  ],
+  "DefaultC_PHC_2_RH": [
+    1,
+    0,
+    135
+  ],
+  "DefaultC_PHC_3_RH": [
+    1,
+    0,
+    136
+  ],
+  "TempPar_1_RH": [
+    12,
+    48,
+    249
+  ],
+  "TempPar_2_RH": [
+    12,
+    48,
+    250
+  ],
+  "TempPar_3_RH": [
+    12,
+    48,
+    251
+  ],
+  "TempPar_4_RH": [
+    12,
+    48,
+    252
+  ],
+  "TempPar_5_RH": [
+    12,
+    48,
+    253
+  ],
+  "TempPar_6_RH": [
+    12,
+    48,
+    255
+  ],
+  "TempPar_7_RH": [
+    9,
+    41,
+    250
+  ],
+  "TempPar_8_RH": [
+    9,
+    41,
+    251
+  ],
+  "TempPar_9_RH": [
+    9,
+    41,
+    252
+  ],
+  "TempPar_10_RH": [
+    9,
+    41,
+    253
+  ],
+  "TempPar_11_RH": [
+    9,
+    41,
+    254
+  ],
+  "TempPar_12_RH": [
+    9,
+    42,
+    247
+  ],
+  "TempPar_13_RH": [
+    9,
+    42,
+    248
+  ]
+}

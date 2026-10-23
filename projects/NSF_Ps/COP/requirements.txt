@@ -1,0 +1,56 @@
+
+# ============================================================
+# COP - Configurable Optodes Placement
+# Python Dependencies
+# ============================================================
+
+# 1. Numerical Computing
+numpy
+scipy
+pandas
+
+# 2. Visualization
+matplotlib
+seaborn
+plotly
+
+# 3. Scientific Computing and Optimization
+scikit-learn
+networkx
+cvxpy
+
+# 4. Machine Learning and Deep Learning
+torch
+torchvision
+
+# 5. Reinforcement Learning
+gymnasium
+stable-baselines3
+
+# 6. Multi-Agent Reinforcement Learning
+pettingzoo
+
+# 7. fNIRS and Neuroimaging
+mne
+mne-nirs
+
+# 8. Configuration and Validation
+pyyaml
+pydantic
+
+# 9. Experiment Tracking
+tensorboard
+tqdm
+
+# 10. Testing and Development
+pytest
+ruff
+
+# 11. Interactive Notebooks
+jupyterlab
+ipykernel
+
+
+# 12. Brain related
+pyvista
+# cedalion pyvista
