@@ -235,19 +235,67 @@ def looks_like_table_header(
     remaining = normalized[1:]
 
     # --------------------------------------------------------
-    # Two-column scalar protection
+    # Two-column rows
     #
-    # Example:
-    # Time From Time Zero to Deployment (...) | 45
+    # A two-column row is treated as scalar unless the first
+    # cell is a clear ordered axis and the second cell looks
+    # like a measurement/signal name. This prevents labels
+    # such as "Time to Deployment Command" from becoming
+    # false table headers while preserving true headers such
+    # as "Time (ms) | Acceleration".
     # --------------------------------------------------------
 
-    if (
-        len(cells) == 2
-        and looks_like_scalar_value(
-            remaining[0]
+    if len(cells) == 2:
+        second = normalized[1]
+
+        axis_patterns = (
+            r"^time(?:\s*\([^)]*\))?$",
+            r"^times(?:\s*\([^)]*\))?$",
+            r"^relative time(?:\s*\([^)]*\))?$",
+            r"^sample(?:\s*(?:number|#))?$",
+            r"^sample index$",
+            r"^index$",
+            r"^buffer(?:\s*(?:address|index|order))?$",
+            r"^sequence(?:\s*(?:number|#))?$",
         )
-    ):
-        return False
+
+        first_is_axis = any(
+            re.fullmatch(
+                pattern,
+                first,
+                re.IGNORECASE,
+            )
+            is not None
+            for pattern in axis_patterns
+        )
+
+        measurement_terms_two_col = (
+            "delta-v",
+            "delta v",
+            "acceleration",
+            "velocity",
+            "speed",
+            "angular rate",
+            "pressure",
+            "throttle",
+            "brake",
+            "steering",
+            "rpm",
+            "yaw rate",
+            "roll rate",
+            "lateral acceleration",
+            "longitudinal acceleration",
+        )
+
+        second_is_signal = any(
+            term in second
+            for term in measurement_terms_two_col
+        )
+
+        return bool(
+            first_is_axis
+            and second_is_signal
+        )
 
     # ========================================================
     # Strong axis/header first-column signal
@@ -264,9 +312,6 @@ def looks_like_table_header(
     if first.startswith(
         strong_first_column_patterns
     ):
-        # At this point the following cell(s) do not look like
-        # a simple scalar value, so this can reasonably be a
-        # measurement-table header.
         return True
 
     # ========================================================
@@ -512,6 +557,54 @@ def parse_observation(
     )
 
     if label:
+        # ----------------------------------------------------
+        # Protected semantic lists
+        #
+        # These labels may contain multiple pipe-/column-
+        # separated values, but they are categorical/report
+        # lists rather than time-series measurements. Preserve
+        # them as scalar semantic observations so the routing
+        # layer can send them to Group 3 or Group 1.
+        # ----------------------------------------------------
+
+        normalized_label = normalize_text(
+            label
+        )
+
+        protected_non_timeseries_list = (
+            normalized_label.startswith(
+                "occupant size classification"
+            )
+            or normalized_label in {
+                "event(s) recovered",
+                "events recovered",
+                "events_recovered_text",
+            }
+        )
+
+        if (
+            protected_non_timeseries_list
+            and len(values) >= 1
+        ):
+            return Observation(
+                row_index=row_index,
+                row_number=row_number,
+                raw_row=cleaned_row,
+                observation_type="scalar",
+                label=label,
+                values=values,
+                value_count=len(values),
+                packed_sequence=False,
+                packed_sequence_count=0,
+                section_context=section_context,
+                is_empty=False,
+                is_section_heading=False,
+                is_scalar=True,
+                is_repeated=False,
+                is_table_header=False,
+                parser_status="parsed",
+            )
+
         (
             is_repeated,
             packed_sequence,

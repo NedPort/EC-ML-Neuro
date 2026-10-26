@@ -745,6 +745,82 @@ def classify_group2(
         )
 
     # --------------------------------------------------------
+    # Reviewed semantic deferrals
+    #
+    # These labels may occur inside Group 2-like sections, but
+    # their meaning belongs to another extraction pathway.
+    # matched=False is intentional: Group 2 provides a routing
+    # hint but must not steal the observation from the native
+    # semantic rule module.
+    # --------------------------------------------------------
+
+    if re.search(
+        r"\balgorithm active\b",
+        label,
+        re.IGNORECASE,
+    ):
+        return Group2RuleResult(
+            matched=False,
+            destination="group3",
+            field_family="event_algorithm_status",
+            confidence="high",
+            reason=(
+                "Algorithm-active state is event condition/status "
+                "information rather than record structure."
+            ),
+        )
+
+    if re.search(
+        r"\bonstar\b.*\bdata sent\b",
+        label,
+        re.IGNORECASE,
+    ):
+        return Group2RuleResult(
+            matched=False,
+            destination="group3",
+            field_family="event_status",
+            confidence="high",
+            reason=(
+                "OnStar data-sent state is an event/status field "
+                "and must not be captured by generic Group 2 "
+                "'data sent' vocabulary."
+            ),
+        )
+
+    if re.search(
+        r"\btime\s+from\s+pre[- ]crash\s+to\s+trg\b",
+        label,
+        re.IGNORECASE,
+    ):
+        return Group2RuleResult(
+            matched=False,
+            destination="group5_companion",
+            field_family="measurement_context",
+            confidence="high",
+            reason=(
+                "Pre-crash-to-TRG timing is scalar measurement "
+                "context, not Group 2 record structure."
+            ),
+        )
+
+    if re.search(
+        r"\b(?:lifetime\s+)?operating\s+timer\b"
+        r"|\boperation\s+system\s+time\b",
+        label,
+        re.IGNORECASE,
+    ):
+        return Group2RuleResult(
+            matched=False,
+            destination="group6",
+            field_family="operating_time",
+            confidence="high",
+            reason=(
+                "Operating/system time is technical readout "
+                "information and belongs to Group 6."
+            ),
+        )
+
+    # --------------------------------------------------------
     # Reviewed Group 2 contextual fields
     # --------------------------------------------------------
 
@@ -799,7 +875,7 @@ def classify_group2(
 
     if scope == "reported_record_candidate":
         return Group2RuleResult(
-            matched=True,
+            matched=False,
             destination="group2",
             field_family="record_status",
             confidence="medium",
@@ -812,7 +888,7 @@ def classify_group2(
 
     if scope == "retrieval_level":
         return Group2RuleResult(
-            matched=True,
+            matched=False,
             destination="group2",
             field_family="retrieval_status",
             confidence="medium",

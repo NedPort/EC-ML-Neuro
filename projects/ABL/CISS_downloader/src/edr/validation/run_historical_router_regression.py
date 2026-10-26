@@ -548,16 +548,33 @@ def load_group2(
             directory
         )
 
+    # Hard historical Group 2 regression must use only
+    # tables that represent validated Group 2 observations.
+    #
+    # Do NOT include:
+    #   - other_group_fields_long.csv
+    #       This table explicitly contains observations discovered
+    #       during Group 2 processing but assigned to other groups.
+    #   - pdf_fields_long.csv
+    #       This is broad PDF scalar evidence and is not pure Group 2
+    #       ground truth.
+    allowed_group2_files = {
+        "group2_context_status_long.csv",
+        "record_status_long.csv",
+        "retrieval_status_long.csv",
+    }
+
     candidate_files = [
-        path
-        for path
+        directory / filename
+        for filename
         in sorted(
-            directory.glob(
-                "*.csv"
-            )
+            allowed_group2_files
         )
-        if looks_like_group2_observation_table(
-            path
+        if (
+            (directory / filename).exists()
+            and looks_like_group2_observation_table(
+                directory / filename
+            )
         )
     ]
 

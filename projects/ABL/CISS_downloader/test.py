@@ -1,86 +1,266 @@
-from src.edr.validation.router_regression import (
-    compare_raw_row,
-    summarize_results,
-    validate_regression,
+from pathlib import Path
+
+import pandas as pd
+
+
+BASE_DIR = Path(
+    "data/processed/edr/router_regression_v1"
+)
+
+MISMATCH_FILE = BASE_DIR / "destination_mismatches.csv"
+UNCLASSIFIED_FILE = BASE_DIR / "newly_unclassified.csv"
+
+
+def print_section(title: str) -> None:
+    print("\n" + "=" * 90)
+    print(title)
+    print("=" * 90)
+
+
+# ============================================================
+# Destination mismatches
+# ============================================================
+
+mismatch = pd.read_csv(
+    MISMATCH_FILE,
+    low_memory=False,
+)
+
+print_section("DESTINATION MISMATCH OVERVIEW")
+
+print(f"Rows: {len(mismatch):,}")
+
+print("\nColumns:")
+for column in mismatch.columns:
+    print(f"  - {column}")
+
+
+# ------------------------------------------------------------
+# Expected destination -> actual destination
+# ------------------------------------------------------------
+
+if {
+    "expected_destination",
+    "actual_destination",
+}.issubset(mismatch.columns):
+
+    print_section(
+        "EXPECTED DESTINATION -> ACTUAL DESTINATION"
+    )
+
+    transition_counts = (
+        mismatch.groupby(
+            [
+                "expected_destination",
+                "actual_destination",
+            ],
+            dropna=False,
+        )
+        .size()
+        .reset_index(name="count")
+        .sort_values(
+            "count",
+            ascending=False,
+        )
+    )
+
+    print(
+        transition_counts.head(50).to_string(
+            index=False
+        )
+    )
+
+    transition_counts.to_csv(
+        BASE_DIR
+        / "mismatch_transition_summary.csv",
+        index=False,
+    )
+
+
+# ------------------------------------------------------------
+# Mismatches by historical/reference group
+# ------------------------------------------------------------
+
+if "reference_group" in mismatch.columns:
+
+    print_section(
+        "MISMATCHES BY REFERENCE GROUP"
+    )
+
+    reference_summary = (
+        mismatch["reference_group"]
+        .fillna("<missing>")
+        .value_counts()
+        .rename_axis("reference_group")
+        .reset_index(name="count")
+    )
+
+    print(
+        reference_summary.to_string(
+            index=False
+        )
+    )
+
+    reference_summary.to_csv(
+        BASE_DIR
+        / "mismatch_by_reference_group.csv",
+        index=False,
+    )
+
+
+# ------------------------------------------------------------
+# Top problematic labels
+# ------------------------------------------------------------
+
+label_column = None
+
+for candidate in [
+    "raw_label",
+    "label",
+]:
+    if candidate in mismatch.columns:
+        label_column = candidate
+        break
+
+
+if label_column is not None:
+
+    print_section(
+        "TOP MISMATCH LABELS"
+    )
+
+    label_summary = (
+        mismatch[label_column]
+        .fillna("<missing>")
+        .astype(str)
+        .value_counts()
+        .rename_axis("label")
+        .reset_index(name="count")
+    )
+
+    print(
+        label_summary.head(100).to_string(
+            index=False
+        )
+    )
+
+    label_summary.to_csv(
+        BASE_DIR
+        / "mismatch_label_summary.csv",
+        index=False,
+    )
+
+
+# ------------------------------------------------------------
+# Label + expected + actual routing
+# ------------------------------------------------------------
+
+if (
+    label_column is not None
+    and {
+        "expected_destination",
+        "actual_destination",
+    }.issubset(mismatch.columns)
+):
+
+    print_section(
+        "TOP LABEL / EXPECTED / ACTUAL PATTERNS"
+    )
+
+    pattern_summary = (
+        mismatch.groupby(
+            [
+                label_column,
+                "expected_destination",
+                "actual_destination",
+            ],
+            dropna=False,
+        )
+        .size()
+        .reset_index(name="count")
+        .sort_values(
+            "count",
+            ascending=False,
+        )
+    )
+
+    print(
+        pattern_summary.head(100).to_string(
+            index=False
+        )
+    )
+
+    pattern_summary.to_csv(
+        BASE_DIR
+        / "mismatch_pattern_summary.csv",
+        index=False,
+    )
+
+
+# ============================================================
+# Newly unclassified
+# ============================================================
+
+unclassified = pd.read_csv(
+    UNCLASSIFIED_FILE,
+    low_memory=False,
+)
+
+print_section(
+    "NEWLY UNCLASSIFIED OVERVIEW"
+)
+
+print(
+    f"Rows: {len(unclassified):,}"
 )
 
 
-print("\n")
-print("=" * 80)
-print("ROUTER REGRESSION VALIDATION MODULE TEST")
-print("=" * 80)
+unclassified_label_column = None
+
+for candidate in [
+    "raw_label",
+    "label",
+]:
+    if candidate in unclassified.columns:
+        unclassified_label_column = candidate
+        break
 
 
-validation_tests = [
-    compare_raw_row(
-        row=[
-            "Maximum Delta-V, Longitudinal (km/h)",
-            "-24",
-        ],
-        row_index=0,
-        section_context="CRASH PULSE",
-        expected_destination="group5",
-        expected_family="delta_v_summary",
-        report_id="test001",
-        case_id="case001",
-        vehicle_number="1",
-        source_format="csv",
-    ),
+if unclassified_label_column is not None:
 
-    compare_raw_row(
-        row=[
-            "Safety Belt Status, Driver",
-            "Buckled",
-        ],
-        row_index=1,
-        section_context="SYSTEM STATUS AT EVENT",
-        expected_destination="group3",
-        expected_family="occupant_restraint_status",
-        report_id="test002",
-        case_id="case002",
-        vehicle_number="1",
-        source_format="csv",
-    ),
+    print_section(
+        "TOP NEWLY UNCLASSIFIED LABELS"
+    )
 
-    compare_raw_row(
-        row=[
-            "Ignition Cycles at Investigation",
-            "42",
-        ],
-        row_index=2,
-        section_context="MODULE INFORMATION",
-        expected_destination="group6",
-        expected_family="ignition_cycle_readout",
-        report_id="test003",
-        case_id="case003",
-        vehicle_number="1",
-        source_format="csv",
-    ),
-]
+    unclassified_summary = (
+        unclassified[
+            unclassified_label_column
+        ]
+        .fillna("<missing>")
+        .astype(str)
+        .value_counts()
+        .rename_axis("label")
+        .reset_index(name="count")
+    )
+
+    print(
+        unclassified_summary.head(100).to_string(
+            index=False
+        )
+    )
+
+    unclassified_summary.to_csv(
+        BASE_DIR
+        / "newly_unclassified_label_summary.csv",
+        index=False,
+    )
 
 
-for result in validation_tests:
-    print("-" * 80)
-    print(f"Label: {result.raw_label}")
-    print(f"Expected: {result.expected_destination}")
-    print(f"Actual: {result.actual_destination}")
-    print(f"Expected family: {result.expected_family}")
-    print(f"Actual family: {result.actual_family}")
-    print(f"Level: {result.regression_level}")
-    print(f"Status: {result.regression_status}")
-
-
-summary = summarize_results(
-    validation_tests
+print_section(
+    "ANALYSIS COMPLETE"
 )
 
-checks = validate_regression(
-    validation_tests
+print(
+    "Summary files written to:"
 )
-
-
-print("\nSUMMARY")
-print(summary)
-
-print("\nVALIDATION")
-print(checks)
+print(BASE_DIR)
