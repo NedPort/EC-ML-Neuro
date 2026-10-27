@@ -54,8 +54,8 @@ if str(HEAD_CODE_DIR) not in sys.path:
 # 2. IMPORT OUR EXISTING LOADERS
 # ============================================================
 
-from brain_surface import load_brain_surface
-from scalp_surface import load_scalp_surface
+from .brain_surface import load_brain_surface
+from .scalp_surface import load_scalp_surface
 
 
 # ============================================================
