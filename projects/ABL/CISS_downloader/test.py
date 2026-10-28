@@ -1,266 +1,328 @@
+import csv
+from collections import Counter
 from pathlib import Path
 
-import pandas as pd
+from src.edr_new.rules.group_6_r import extract_group6_report
 
 
-BASE_DIR = Path(
-    "data/processed/edr/router_regression_v1"
+INVENTORY = Path(
+    "data/processed/edr/edr_export_inventory.csv"
 )
 
-MISMATCH_FILE = BASE_DIR / "destination_mismatches.csv"
-UNCLASSIFIED_FILE = BASE_DIR / "newly_unclassified.csv"
-
-
-def print_section(title: str) -> None:
-    print("\n" + "=" * 90)
-    print(title)
-    print("=" * 90)
-
-
-# ============================================================
-# Destination mismatches
-# ============================================================
-
-mismatch = pd.read_csv(
-    MISMATCH_FILE,
-    low_memory=False,
+VALIDATED_COVERAGE = Path(
+    "data/processed/edr/group2_final_v1/report_coverage.csv"
 )
 
-print_section("DESTINATION MISMATCH OVERVIEW")
 
-print(f"Rows: {len(mismatch):,}")
+EXPECTED = {
+    "reports_selected": 1422,
+    "technical_records": 13618,
+    "csv_records": 13202,
+    "pdf_records": 416,
+    "technical_values": 13618,
+    "review_evidence": 8637,
+    "reports_with_records": 1391,
+    "cases_with_records": 1170,
+}
 
-print("\nColumns:")
-for column in mismatch.columns:
-    print(f"  - {column}")
+
+def read_csv(path):
+    with path.open(
+        encoding="utf-8-sig",
+        newline="",
+    ) as f:
+        return list(csv.DictReader(f))
 
 
-# ------------------------------------------------------------
-# Expected destination -> actual destination
-# ------------------------------------------------------------
+def resolve_path(raw):
+    if not raw:
+        return None
 
-if {
-    "expected_destination",
-    "actual_destination",
-}.issubset(mismatch.columns):
+    path = Path(raw)
 
-    print_section(
-        "EXPECTED DESTINATION -> ACTUAL DESTINATION"
-    )
+    return path if path.is_file() else None
 
-    transition_counts = (
-        mismatch.groupby(
-            [
-                "expected_destination",
-                "actual_destination",
-            ],
-            dropna=False,
+
+def main():
+    inventory = read_csv(INVENTORY)
+    coverage = read_csv(VALIDATED_COVERAGE)
+
+    validated_map = {
+        (
+            row["case_id"],
+            row["vehicle_number"],
+            row["export_basename"],
+        ): row
+        for row in coverage
+    }
+
+    rows = [
+        row
+        for row in inventory
+        if (
+            row["case_id"],
+            row["vehicle_number"],
+            row["export_basename"],
         )
-        .size()
-        .reset_index(name="count")
-        .sort_values(
-            "count",
-            ascending=False,
+        in validated_map
+    ]
+
+    print("Reports selected:", len(rows))
+
+    if len(rows) != 1422:
+        raise RuntimeError(
+            f"Expected 1422 reports, got {len(rows)}"
         )
+
+    totals = Counter()
+    source_counts = Counter()
+    family_counts = Counter()
+
+    reports_with_records = set()
+    cases_with_records = set()
+
+    extraction_errors = []
+
+    for index, row in enumerate(rows, 1):
+
+        key = (
+            row["case_id"],
+            row["vehicle_number"],
+            row["export_basename"],
+        )
+
+        historical = validated_map[key]
+
+        report_id = (
+            historical.get("report_id", "")
+            or row.get("report_id", "")
+        )
+
+        identity = {
+            "report_id": report_id,
+            "case_id": row["case_id"],
+            "vehicle_number":
+                row["vehicle_number"],
+            "export_basename":
+                row["export_basename"],
+        }
+
+        csv_path = resolve_path(
+            row.get("csv_export_path", "")
+        )
+
+        pdf_path = resolve_path(
+            row.get("pdf_export_path", "")
+        )
+
+        try:
+            result = extract_group6_report(
+                identity=identity,
+                csv_path=csv_path,
+                pdf_path=pdf_path,
+            )
+
+        except Exception as exc:
+            extraction_errors.append({
+                "report_id": report_id,
+                "case_id": row["case_id"],
+                "vehicle_number":
+                    row["vehicle_number"],
+                "error_type":
+                    type(exc).__name__,
+                "error": str(exc),
+            })
+            continue
+
+        source_counts[
+            result.source_format
+        ] += 1
+
+        record_count = len(
+            result.technical_registry
+        )
+
+        totals[
+            "technical_records"
+        ] += record_count
+
+        totals[
+            f"{result.source_format}_records"
+        ] += record_count
+
+        totals[
+            "technical_values"
+        ] += len(
+            result.technical_values
+        )
+
+        totals[
+            "review_evidence"
+        ] += len(
+            result.review_evidence
+        )
+
+        totals[
+            "excluded"
+        ] += len(
+            result.excluded
+        )
+
+        totals[
+            "unresolved"
+        ] += len(
+            result.unresolved
+        )
+
+        totals[
+            "issues"
+        ] += len(
+            result.issues
+        )
+
+        if record_count:
+            reports_with_records.add(
+                report_id
+            )
+
+            cases_with_records.add(
+                row["case_id"]
+            )
+
+        for item in result.technical_registry:
+            family_counts[
+                item.get("family", "")
+            ] += 1
+
+        if result.issues:
+            for issue in result.issues:
+                extraction_errors.append({
+                    "report_id":
+                        report_id,
+                    "case_id":
+                        row["case_id"],
+                    "vehicle_number":
+                        row["vehicle_number"],
+                    "error_type":
+                        "reported_issue",
+                    "error":
+                        str(issue),
+                })
+
+        if index % 100 == 0:
+            print(
+                f"Processed {index}/{len(rows)}..."
+            )
+
+    actual = {
+        "reports_selected":
+            len(rows),
+
+        "technical_records":
+            totals["technical_records"],
+
+        "csv_records":
+            totals["csv_records"],
+
+        "pdf_records":
+            totals["pdf_records"],
+
+        "technical_values":
+            totals["technical_values"],
+
+        "review_evidence":
+            totals["review_evidence"],
+
+        "reports_with_records":
+            len(
+                reports_with_records
+            ),
+
+        "cases_with_records":
+            len(
+                cases_with_records
+            ),
+    }
+
+    print("\n" + "=" * 80)
+    print("GROUP 6 REGRESSION")
+    print("=" * 80)
+
+    print("\nSource selection:")
+    print(dict(source_counts))
+
+    print("\nComparison:")
+
+    overall_pass = True
+
+    for name, expected in EXPECTED.items():
+        observed = actual[name]
+
+        status = (
+            "PASS"
+            if observed == expected
+            else "FAIL"
+        )
+
+        if status == "FAIL":
+            overall_pass = False
+
+        print(
+            f"{name:<30}"
+            f" actual={observed:<10}"
+            f" expected={expected:<10}"
+            f" {status}"
+        )
+
+    print(
+        "\nUnresolved:",
+        totals["unresolved"],
     )
 
     print(
-        transition_counts.head(50).to_string(
-            index=False
-        )
-    )
-
-    transition_counts.to_csv(
-        BASE_DIR
-        / "mismatch_transition_summary.csv",
-        index=False,
-    )
-
-
-# ------------------------------------------------------------
-# Mismatches by historical/reference group
-# ------------------------------------------------------------
-
-if "reference_group" in mismatch.columns:
-
-    print_section(
-        "MISMATCHES BY REFERENCE GROUP"
-    )
-
-    reference_summary = (
-        mismatch["reference_group"]
-        .fillna("<missing>")
-        .value_counts()
-        .rename_axis("reference_group")
-        .reset_index(name="count")
+        "Issues:",
+        totals["issues"],
     )
 
     print(
-        reference_summary.to_string(
-            index=False
-        )
+        "Extraction errors:",
+        len(extraction_errors),
     )
 
-    reference_summary.to_csv(
-        BASE_DIR
-        / "mismatch_by_reference_group.csv",
-        index=False,
-    )
+    if (
+        totals["unresolved"]
+        or totals["issues"]
+        or extraction_errors
+    ):
+        overall_pass = False
 
+    if extraction_errors:
+        print("\nFirst errors/issues:")
 
-# ------------------------------------------------------------
-# Top problematic labels
-# ------------------------------------------------------------
-
-label_column = None
-
-for candidate in [
-    "raw_label",
-    "label",
-]:
-    if candidate in mismatch.columns:
-        label_column = candidate
-        break
-
-
-if label_column is not None:
-
-    print_section(
-        "TOP MISMATCH LABELS"
-    )
-
-    label_summary = (
-        mismatch[label_column]
-        .fillna("<missing>")
-        .astype(str)
-        .value_counts()
-        .rename_axis("label")
-        .reset_index(name="count")
-    )
+        for error in extraction_errors[:20]:
+            print(error)
 
     print(
-        label_summary.head(100).to_string(
-            index=False
+        "\nExcluded total:",
+        totals["excluded"],
+    )
+
+    print("\nFamilies:")
+
+    for family, count in (
+        family_counts.most_common()
+    ):
+        print(
+            f"{count:>8}  {family}"
         )
-    )
 
-    label_summary.to_csv(
-        BASE_DIR
-        / "mismatch_label_summary.csv",
-        index=False,
-    )
-
-
-# ------------------------------------------------------------
-# Label + expected + actual routing
-# ------------------------------------------------------------
-
-if (
-    label_column is not None
-    and {
-        "expected_destination",
-        "actual_destination",
-    }.issubset(mismatch.columns)
-):
-
-    print_section(
-        "TOP LABEL / EXPECTED / ACTUAL PATTERNS"
-    )
-
-    pattern_summary = (
-        mismatch.groupby(
-            [
-                label_column,
-                "expected_destination",
-                "actual_destination",
-            ],
-            dropna=False,
-        )
-        .size()
-        .reset_index(name="count")
-        .sort_values(
-            "count",
-            ascending=False,
-        )
-    )
-
+    print("\nOverall:")
     print(
-        pattern_summary.head(100).to_string(
-            index=False
-        )
-    )
-
-    pattern_summary.to_csv(
-        BASE_DIR
-        / "mismatch_pattern_summary.csv",
-        index=False,
+        "PASS"
+        if overall_pass
+        else "NEEDS REVISION"
     )
 
 
-# ============================================================
-# Newly unclassified
-# ============================================================
-
-unclassified = pd.read_csv(
-    UNCLASSIFIED_FILE,
-    low_memory=False,
-)
-
-print_section(
-    "NEWLY UNCLASSIFIED OVERVIEW"
-)
-
-print(
-    f"Rows: {len(unclassified):,}"
-)
-
-
-unclassified_label_column = None
-
-for candidate in [
-    "raw_label",
-    "label",
-]:
-    if candidate in unclassified.columns:
-        unclassified_label_column = candidate
-        break
-
-
-if unclassified_label_column is not None:
-
-    print_section(
-        "TOP NEWLY UNCLASSIFIED LABELS"
-    )
-
-    unclassified_summary = (
-        unclassified[
-            unclassified_label_column
-        ]
-        .fillna("<missing>")
-        .astype(str)
-        .value_counts()
-        .rename_axis("label")
-        .reset_index(name="count")
-    )
-
-    print(
-        unclassified_summary.head(100).to_string(
-            index=False
-        )
-    )
-
-    unclassified_summary.to_csv(
-        BASE_DIR
-        / "newly_unclassified_label_summary.csv",
-        index=False,
-    )
-
-
-print_section(
-    "ANALYSIS COMPLETE"
-)
-
-print(
-    "Summary files written to:"
-)
-print(BASE_DIR)
+if __name__ == "__main__":
+    main()

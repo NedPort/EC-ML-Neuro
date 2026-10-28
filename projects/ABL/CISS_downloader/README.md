@@ -295,3 +295,79 @@ uv run python build_edr_csv_family_inventory.py   ## Info regarding the Provisio
 uv run python parse_edr_csv_raw_sections.py    ######
 
 uv run python build_edr_crash_signal_timeseries.py  ### This is not reliable now, I ma working on it
+
+
+
+
+#####  
+## EDR Extraction Pipeline
+
+The `src/edr_new/` package contains the validated production pipeline for extracting structured EDR information from CISS crash reports.
+
+The pipeline is organized into six extraction groups:
+
+- **Group 1:** report metadata and introductory/documentation fields
+- **Group 2:** recorded-event structure, event status, retrieval status, and event context
+- **Group 3:** event conditions, restraint/deployment status, occupant-related fields, and other event-state information
+- **Group 4:** repeated time-series measurements and signal data
+- **Group 5:** scalar crash-event measurements such as Delta-V, peak acceleration, timing, and related summaries
+- **Group 6:** technical, module, configuration, readout, identification, and investigation metadata
+
+### Source Selection
+
+The source is selected once per report:
+
+```text
+If CSV exists -> use CSV for the entire report
+If CSV is absent -> use PDF
+```
+
+The pipeline does not fill missing CSV fields from the PDF.
+
+### Validation
+
+Each reusable Group 1–6 extractor was regression-tested against the historical frozen datasets before being used in the production pipeline.
+
+All six groups reproduced their validated historical outputs successfully.
+
+### Production Pipeline
+
+The main runner is:
+
+```text
+src/edr_new/pipeline/run_edr_pipeline.py
+```
+
+Run the full extraction with:
+
+```powershell
+uv run --active python -m src.edr_new.pipeline.run_edr_pipeline --overwrite
+```
+
+The pipeline processes the complete EDR inventory and writes results to:
+
+```text
+data/processed/edr_new/
+```
+
+Main outputs include:
+
+```text
+data/processed/edr_new/
+├── group1/
+├── group2/
+├── group3/
+├── group4/
+├── group5/
+├── group6/
+├── report_manifest.csv
+├── pipeline_errors.csv
+├── pipeline_review.csv
+└── metadata.json
+```
+
+`pipeline_errors.csv` contains true extraction/runtime failures.
+
+`pipeline_review.csv` contains expected review or handoff flags that do not represent pipeline failures.
+
+The historical validation population contains **1,422 reports**. The production inventory contains **1,853 reports**, including **431 newly processed reports**.
