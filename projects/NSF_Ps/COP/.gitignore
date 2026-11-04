@@ -1,0 +1,32 @@
+
+# EEG datasets
+eeg_data/
+
+# Generated ICA results
+stage_2_functional_brain/eeg/ica_results/
+
+# Processed EEG files
+stage_2_functional_brain/eeg/processed/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+.venv/
+venv/
+
+# Generated results and figures
+results/
+outputs/
+figures/
+
+# Temporary files
+*.log
+*.tmp
+
+# EEG recordings and processed data
+*.edf
+*.bdf
+*.fif
