@@ -54,3 +54,6 @@ ipykernel
 # 12. Brain related
 pyvista
 # cedalion pyvista
+
+# 13. IC lAB 
+mne-icalabel
