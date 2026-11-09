@@ -278,6 +278,8 @@ uv run python edr_main.py --target-cdrx 10 --max-cases-scanned 20
 
 uv run python edr_main.py --summary
 
+uv run python count_all_ciss_cdrx.py --resume
+
 ### Using Software and Extracting CSV and PDF files  and Save them
 
 uv run python build_cdrx_inventory.py
