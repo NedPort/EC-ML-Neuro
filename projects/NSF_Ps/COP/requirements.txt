@@ -57,3 +57,7 @@ pyvista
 
 # 13. IC lAB 
 mne-icalabel
+
+# EEG forward modeling requirements
+gmsh
+scikit-image

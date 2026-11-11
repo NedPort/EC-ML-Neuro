@@ -30,3 +30,15 @@ figures/
 *.edf
 *.bdf
 *.fif
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.fif
+*.obj
+*.vtk
+*.txt
+*.csv
+*.json
+*.surf
+*.mtx
