@@ -5,5 +5,7 @@ jsonschema==4.26.0
 openpyxl>=3.1.5
 pandas>=2.0
 pyarrow>=15.0
-pywinauto==0.6.9
+pywinauto>=0.6.9
 pdfplumber>=0.9.0
+pymupdf>=1.28.
+pdfplumber>=0.11.10
