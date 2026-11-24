@@ -8,6 +8,8 @@ from pathlib import Path
 from statistics import median
 from typing import Any
 
+import csv
+import hashlib
 import json
 import re
 import zipfile
@@ -4489,6 +4491,90 @@ class CaseAuditor:
             },
         }
 
+    def _audit_acquisition_integrity(self, case_id, asset_registry, manifest):
+        """Read-only, independent verification of downloaded archive assets."""
+        root = self.data_root / "temp" / str(case_id) / "extracted"
+        assets = asset_registry.get("assets", []) if isinstance(asset_registry, dict) else []
+        checks = []
+        for asset in assets:
+            relative = asset.get("relative_path")
+            item = {"relative_path": relative, "status": "unchecked"}
+            if not isinstance(relative, str) or not relative:
+                item["status"] = "invalid_registry_path"
+            else:
+                candidate = (root / relative).resolve()
+                if not candidate.is_relative_to(root.resolve()):
+                    item["status"] = "unsafe_registry_path"
+                elif not candidate.is_file():
+                    item["status"] = "missing"
+                else:
+                    expected_size = asset.get("size_bytes")
+                    expected_hash = asset.get("sha256")
+                    item["actual_size_bytes"] = candidate.stat().st_size
+                    if expected_size is not None and item["actual_size_bytes"] != expected_size:
+                        item["status"] = "size_mismatch"
+                    elif expected_hash:
+                        digest = hashlib.sha256()
+                        with candidate.open("rb") as stream:
+                            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                                digest.update(chunk)
+                        item["status"] = "verified" if digest.hexdigest().lower() == str(expected_hash).lower() else "hash_mismatch"
+                    else:
+                        item["status"] = "size_verified_hash_unavailable"
+            checks.append(item)
+        counts = dict(sorted(Counter(item["status"] for item in checks).items()))
+        bad = {"invalid_registry_path", "unsafe_registry_path", "missing", "size_mismatch", "hash_mismatch"}
+        return {
+            "workspace": root.as_posix(), "workspace_exists": root.is_dir(),
+            "manifest_reported_validation_passed": (manifest or {}).get("validation", {}).get("passed"),
+            "registered_asset_count": len(assets), "status_counts": counts,
+            "independently_checked": bool(assets) and root.is_dir(),
+            "passed": bool(assets) and root.is_dir() and not any(item["status"] in bad for item in checks),
+            "checks": checks,
+        }
+
+    def _audit_cdrx_exports(self, case_id, asset_registry):
+        """Compare current disk state with optional, possibly stale CDRX inventory."""
+        root = self.data_root / "temp" / str(case_id) / "extracted"
+        inventory_path = self.data_root / "processed" / "edr" / "cdrx_file_inventory.csv"
+        inventory_rows = []
+        if inventory_path.is_file():
+            with inventory_path.open("r", encoding="utf-8-sig", newline="") as stream:
+                inventory_rows = list(csv.DictReader(stream))
+        records = []
+        assets = asset_registry.get("assets", []) if isinstance(asset_registry, dict) else []
+        for asset in assets:
+            if str(asset.get("extension", "")).lower() != ".cdrx":
+                continue
+            relative = asset.get("relative_path", "")
+            source = (root / relative).resolve()
+            if not source.is_relative_to(root.resolve()):
+                records.append({"relative_path": relative, "status": "unsafe_registry_path"})
+                continue
+            exports = source.parent / "cdr_exports"
+            pdf = exports / (source.stem + ".PDF")
+            csv_file = exports / (source.stem + ".CSV")
+            # Bosch exports may use either upper- or lowercase extensions.
+            def locate(target):
+                if not exports.is_dir():
+                    return None
+                return next((f for f in exports.iterdir() if f.is_file() and f.name.lower() == target.name.lower()), None)
+            pdf_found, csv_found = locate(pdf), locate(csv_file)
+            matching = [row for row in inventory_rows if str(row.get("case_id", "")).strip() == str(case_id) and (row.get("cdrx_filename", "").lower() == source.name.lower() or any(source.name.lower() in str(value).lower() for value in row.values()))]
+            records.append({
+                "relative_path": relative, "cdrx_exists": source.is_file(),
+                "pdf_exists_on_disk": pdf_found is not None,
+                "csv_exists_on_disk": csv_found is not None,
+                "pdf_size_bytes": pdf_found.stat().st_size if pdf_found else None,
+                "csv_size_bytes": csv_found.stat().st_size if csv_found else None,
+                "inventory_matches": len(matching),
+                "inventory_recorded_status": matching[0].get("cdr_export_status") if matching else None,
+                "status": "both_exports_present" if pdf_found and csv_found else "exports_incomplete",
+            })
+        return {"inventory_path": inventory_path.as_posix(), "inventory_available": inventory_path.is_file(),
+                "cdrx_count": len(records), "records": records,
+                "note": "Presence and byte sizes do not establish PDF/CSV semantic correctness."}
+
     # ------------------------------------------------------------------
     # Main audit
     # ------------------------------------------------------------------
@@ -5056,6 +5142,13 @@ class CaseAuditor:
         else:
             status = "audit_passed"
 
+        acquisition_integrity = self._audit_acquisition_integrity(case_id, asset_registry, manifest)
+        cdrx_export_verification = self._audit_cdrx_exports(case_id, asset_registry)
+        if acquisition_integrity["independently_checked"] and not acquisition_integrity["passed"]:
+            errors.append("Independent asset integrity verification detected missing, modified, or unsafe assets.")
+        elif not acquisition_integrity["independently_checked"]:
+            warnings.append("Independent asset verification could not be completed; extracted workspace or registry is unavailable.")
+
         # ----------------------------------------------------------
         # Final audit document
         # ----------------------------------------------------------
@@ -5092,6 +5185,8 @@ class CaseAuditor:
                 ),
             },
             "input_files": input_files,
+            "acquisition_integrity": acquisition_integrity,
+            "cdrx_export_verification": cdrx_export_verification,
             "package_manifest": {
                 "available": (
                     manifest is not None

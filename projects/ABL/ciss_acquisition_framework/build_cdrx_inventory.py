@@ -3,13 +3,23 @@ from __future__ import annotations
 import csv
 import json
 import re
+import os
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
 
-DATA_TEMP_ROOT = Path("data/temp")
-OUTPUT_DIRECTORY = Path("data/processed/edr")
+PROJECT_ROOT = Path(__file__).resolve().parent
+
+DATA_ROOT = Path(
+    os.getenv(
+        "CISS_DATA_ROOT",
+        str(PROJECT_ROOT / "data")
+    )
+).expanduser().resolve()
+
+DATA_TEMP_ROOT = DATA_ROOT / "temp"
+OUTPUT_DIRECTORY = DATA_ROOT / "processed" / "edr"
 
 VEHICLE_DIRECTORY_PATTERN = re.compile(
     r"^Vehicle\s+(\d+)$",
@@ -18,9 +28,9 @@ VEHICLE_DIRECTORY_PATTERN = re.compile(
 
 
 def relative_path(path: Path) -> str:
-    """Return a readable project-relative path when possible."""
+    """Return a project-relative path when possible."""
     try:
-        return str(path.relative_to(Path.cwd()))
+        return str(path.relative_to(PROJECT_ROOT))
     except ValueError:
         return str(path)
 
@@ -191,9 +201,9 @@ def main() -> None:
         "inventory_name": "cdrx_file_inventory",
         "source_root": str(DATA_TEMP_ROOT),
         "scan_rule": (
-            "Scan data/temp/<case_id>/extracted/"
+            "Scan <DATA_TEMP_ROOT>/<case_id>/extracted/"
             "Docs/Vehicle */ recursively for .cdrx files."
-        ),
+                ),
         "cdrx_file_count": len(rows),
         "case_count_with_cdrx": len(
             case_ids_with_cdrx

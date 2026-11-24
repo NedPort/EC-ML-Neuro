@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import re
+import os
 from typing import Iterable
 
 from selenium.common.exceptions import (
@@ -21,6 +22,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+DEFAULT_DATA_ROOT = Path(
+    os.getenv(
+        "CISS_DATA_ROOT",
+        str(PROJECT_ROOT / "data"),
+    )
+).expanduser().resolve()
 
 CATALOG_SCHEMA_VERSION = "1.0"
 
@@ -46,11 +55,11 @@ class CaseDiscovery:
     def __init__(
         self,
         driver,
-        data_root: str | Path = "data",
-        timeout: int = 30,
+        data_root: str | Path = DEFAULT_DATA_ROOT,
+        timeout: int = 60,
     ) -> None:
         self.driver = driver
-        self.data_root = Path(data_root)
+        self.data_root = Path(data_root).expanduser().resolve()
         self.timeout = timeout
 
         self.catalog_path = (

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os 
 import json
 from collections import Counter
 from datetime import datetime, timezone
@@ -31,6 +32,16 @@ from typing import Any
 from src.api.client import CISSApi
 from src.pilot.case_discovery import CaseDiscovery
 from src.pipeline.case_processor import CaseProcessor
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+
+DEFAULT_DATA_ROOT = Path(
+    os.getenv(
+        "CISS_DATA_ROOT",
+        str(PROJECT_ROOT / "data")
+    )
+).expanduser().resolve()
 
 
 DEFAULT_MANIFEST_PATH = Path("data/manifests/edr_cases.json")
@@ -164,10 +175,10 @@ class EdrRunner:
 
     def __init__(
         self,
-        data_root: str = "data",
+        data_root: str | Path = DEFAULT_DATA_ROOT,
         manifest_path: str | None = None,
     ) -> None:
-        self.data_root = Path(data_root)
+        self.data_root = Path(data_root).expanduser().resolve()
 
         self.manifest_path = (
             Path(manifest_path)
@@ -886,8 +897,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--data-root",
-        default="data",
-        help="Project data directory (default: data).",
+        default=str(DEFAULT_DATA_ROOT),
+        help="Root directory for CISS data.",
     )
 
     parser.add_argument(

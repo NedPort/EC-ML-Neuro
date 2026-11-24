@@ -6,13 +6,17 @@ import time
 import win32clipboard
 from collections import Counter
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 
 from pywinauto import Application, Desktop
 
 
 CDR_EXE = Path(
-    r"C:\Program Files (x86)\Bosch\Crash Data Retrieval\CDR.EXE"
+    os.getenv(
+        "BOSCH_CDR_EXE",
+        r"C:\Program Files (x86)\Bosch\Crash Data Retrieval\CDR.EXE"
+    )
 )
 
 INVENTORY_FILE = Path(

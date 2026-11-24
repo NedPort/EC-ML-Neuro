@@ -15,9 +15,18 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+import os
 
 from src.audit.case_auditor import CaseAuditor
 
+PROJECT_ROOT = Path(__file__).resolve().parent
+
+DEFAULT_DATA_ROOT = Path(
+    os.getenv(
+        "CISS_DATA_ROOT",
+        str(PROJECT_ROOT / "data")
+    )
+).expanduser().resolve()
 
 def build_parser() -> argparse.ArgumentParser:
     """Create command-line arguments."""
@@ -30,8 +39,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--data-root",
-        default="data",
-        help="Root data directory; default: data",
+        default=str(DEFAULT_DATA_ROOT),
+        help="Root CISS data directory.",
+    )
+
+    parser.add_argument(
+        "--case-id", type=int, default=None,
+        help="Audit exactly this CISS case ID (instead of all cases).",
     )
 
     parser.add_argument(
@@ -306,8 +320,13 @@ def main() -> None:
     """Audit all downloaded CISS cases."""
     arguments = build_parser().parse_args()
 
-    data_root = Path(arguments.data_root)
+    data_root = Path(arguments.data_root).expanduser().resolve()
     case_ids = find_case_ids(data_root)
+
+    if arguments.case_id is not None:
+        if arguments.case_id not in case_ids:
+            raise SystemExit(f"Case {arguments.case_id} not found under {data_root / 'raw'}")
+        case_ids = [arguments.case_id]
 
     if arguments.limit is not None:
         if arguments.limit < 1:
@@ -396,6 +415,11 @@ def main() -> None:
                     "errors",
                     [],
                 ),
+                "acquisition_integrity": {
+                    "passed": audit.get("acquisition_integrity", {}).get("passed"),
+                    "status_counts": audit.get("acquisition_integrity", {}).get("status_counts", {}),
+                },
+                "cdrx_export_verification": audit.get("cdrx_export_verification", {}),
                 "warnings": audit_summary.get(
                     "warnings",
                     [],
