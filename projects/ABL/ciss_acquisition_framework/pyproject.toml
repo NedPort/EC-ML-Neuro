@@ -1,0 +1,38 @@
+
+[project]
+name = "ciss-acquisition-framework"
+version = "0.1.0"
+description = "A reproducible framework for automated discovery, acquisition, validation, and auditing of NHTSA CISS crash investigation data and EDR reports."
+readme = "README.md"
+requires-python = ">=3.10"
+
+keywords = [
+    "NHTSA",
+    "CISS",
+    "crash investigation",
+    "data acquisition",
+    "EDR",
+    "CDRX",
+    "reproducible research",
+]
+
+dependencies = [
+    # HTTP communication and browser automation
+    "requests>=2.32.5",
+    "selenium>=4.46.0",
+    "webdriver-manager>=4.1.2",
+
+    # Data processing and tabular exports
+    "pandas>=2.0",
+    "pyarrow>=14.0",
+    "openpyxl>=3.1",
+
+    # PDF generation and inspection
+    "reportlab>=5.0.1",
+    "pymupdf>=1.28.2",
+    "pdfplumber>=0.11.10",
+
+    # Windows GUI automation for licensed Bosch CDR software
+    "pywinauto>=0.6.9; sys_platform == 'win32'",
+    "pywin32>=306; sys_platform == 'win32'",
+]
